@@ -1,0 +1,15 @@
+﻿services:
+  spendly-postgres:
+    image: postgres:17
+    container_name: spendly-postgres
+    environment:
+      POSTGRES_DB: spendly
+      POSTGRES_USER: spendly
+      POSTGRES_PASSWORD: spendly_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - spendly_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  spendly_postgres_data:
