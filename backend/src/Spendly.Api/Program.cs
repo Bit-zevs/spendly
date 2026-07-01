@@ -1,27 +1,13 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using Spendly.Api.Extensions;
 
-builder.Services.AddControllers();
-builder.Services.AddHealthChecks();
-builder.Services.AddOpenApi();
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddApiServices();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-app.UseAuthorization();
-
-app.MapHealthChecks("/health");
-app.MapControllers();
-
-app.MapGet("/", () => Results.Ok(new
-{
-    Application = "Spendly API",
-    Status = "Running"
-}));
+app.UseApiPipeline();
+app.MapApiEndpoints();
 
 app.Run();
 
