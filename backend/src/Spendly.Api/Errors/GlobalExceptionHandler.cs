@@ -16,7 +16,9 @@ public sealed class GlobalExceptionHandler(
         {
             logger.LogWarning(
                 exception,
-                "Unhandled exception occurred, but the response has already started. TraceId: {TraceId}",
+                "Unhandled exception occurred, but the response has already started. Method: {Method}. Path: {Path}. TraceId: {TraceId}",
+                httpContext.Request.Method,
+                httpContext.Request.Path,
                 httpContext.TraceIdentifier);
 
             return false;
@@ -24,7 +26,9 @@ public sealed class GlobalExceptionHandler(
 
         logger.LogError(
             exception,
-            "Unhandled exception occurred while processing request. TraceId: {TraceId}",
+            "Unhandled exception occurred while processing request. Method: {Method}. Path: {Path}. TraceId: {TraceId}",
+            httpContext.Request.Method,
+            httpContext.Request.Path,
             httpContext.TraceIdentifier);
 
         const int statusCode = StatusCodes.Status500InternalServerError;
@@ -38,6 +42,8 @@ public sealed class GlobalExceptionHandler(
             Status = statusCode,
             Detail = ProblemDetailsDefaults.GetDetail(statusCode)
         };
+
+        problemDetails.ApplySpendlyDefaults(httpContext);
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
