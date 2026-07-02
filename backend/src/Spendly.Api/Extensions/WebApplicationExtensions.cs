@@ -1,4 +1,5 @@
 using Spendly.Api.Endpoints;
+using Spendly.Api.Errors;
 using Spendly.Api.Health;
 using Spendly.Api.OpenApi;
 
@@ -10,6 +11,8 @@ public static class WebApplicationExtensions
     {
         public WebApplication UseApiPipeline()
         {
+            app.UseApiProblemDetails();
+
             app.UseHttpsRedirection();
             app.UseAuthorization();
 
