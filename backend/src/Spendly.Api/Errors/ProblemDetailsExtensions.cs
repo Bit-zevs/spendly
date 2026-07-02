@@ -29,6 +29,7 @@ public static class ProblemDetailsExtensions
                     Detail = "One or more validation errors occurred."
                 };
 
+                problemDetails.Extensions[ProblemDetailsDefaults.CodeExtensionName] = "validation_error";
                 problemDetails.ApplySpendlyDefaults(context.HttpContext);
 
                 return new BadRequestObjectResult(problemDetails)
@@ -56,6 +57,11 @@ public static class ProblemDetailsExtensions
 
             var statusCode = httpContext.Response.StatusCode;
 
+            if (statusCode < StatusCodes.Status400BadRequest)
+            {
+                return;
+            }
+
             var problemDetailsService =
                 httpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
 
@@ -67,6 +73,8 @@ public static class ProblemDetailsExtensions
                 Detail = ProblemDetailsDefaults.GetDetail(statusCode)
             };
 
+            problemDetails.ApplySpendlyDefaults(httpContext);
+
             await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
             {
                 HttpContext = httpContext,
@@ -77,7 +85,7 @@ public static class ProblemDetailsExtensions
         return app;
     }
 
-    private static void ApplySpendlyDefaults(
+    internal static void ApplySpendlyDefaults(
         this ProblemDetails problemDetails,
         HttpContext httpContext)
     {
@@ -92,8 +100,18 @@ public static class ProblemDetailsExtensions
         problemDetails.Type ??= ProblemDetailsDefaults.GetType(statusCode);
         problemDetails.Title ??= ProblemDetailsDefaults.GetTitle(statusCode);
         problemDetails.Detail ??= ProblemDetailsDefaults.GetDetail(statusCode);
+        problemDetails.Instance ??= httpContext.Request.Path.Value;
 
-        problemDetails.Extensions[ProblemDetailsDefaults.TraceIdExtensionName] =
-            Activity.Current?.Id ?? httpContext.TraceIdentifier;
+        if (!problemDetails.Extensions.ContainsKey(ProblemDetailsDefaults.CodeExtensionName))
+        {
+            problemDetails.Extensions[ProblemDetailsDefaults.CodeExtensionName] =
+                ProblemDetailsDefaults.GetCode(statusCode);
+        }
+
+        if (!problemDetails.Extensions.ContainsKey(ProblemDetailsDefaults.TraceIdExtensionName))
+        {
+            problemDetails.Extensions[ProblemDetailsDefaults.TraceIdExtensionName] =
+                Activity.Current?.Id ?? httpContext.TraceIdentifier;
+        }
     }
 }
