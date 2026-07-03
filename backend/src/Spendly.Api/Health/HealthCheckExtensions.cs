@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Spendly.Api.Configuration;
@@ -7,6 +6,7 @@ namespace Spendly.Api.Health;
 
 public static class HealthCheckExtensions
 {
+    private const string JsonContentType = "application/json";
     private const string ReadyTag = "ready";
     private const string SelfCheckName = "self";
 
@@ -32,30 +32,45 @@ public static class HealthCheckExtensions
             return endpoints;
         }
 
-        endpoints.MapHealthChecks(options.LivePath, new HealthCheckOptions
-            {
-                Predicate = _ => false,
-                ResponseWriter = WriteHealthCheckResponseAsync
-            })
+        endpoints.MapGet(
+                options.LivePath,
+                async (HealthCheckService healthCheckService, CancellationToken cancellationToken) =>
+                    await ExecuteHealthCheckAsync(
+                        healthCheckService,
+                        predicate: _ => false,
+                        cancellationToken))
             .AllowAnonymous()
             .WithName("GetLivenessHealth")
-            .WithTags("Health Checks");
+            .WithTags("Health Checks")
+            .WithSummary("Get liveness health")
+            .WithDescription("Checks whether the API process is alive and able to respond to HTTP requests.")
+            .Produces<HealthCheckResponse>(StatusCodes.Status200OK, JsonContentType)
+            .Produces<HealthCheckResponse>(StatusCodes.Status503ServiceUnavailable, JsonContentType);
 
-        endpoints.MapHealthChecks(options.ReadyPath, new HealthCheckOptions
-            {
-                Predicate = check => check.Tags.Contains(ReadyTag, StringComparer.OrdinalIgnoreCase),
-                ResponseWriter = WriteHealthCheckResponseAsync
-            })
+        endpoints.MapGet(
+                options.ReadyPath,
+                async (HealthCheckService healthCheckService, CancellationToken cancellationToken) =>
+                    await ExecuteHealthCheckAsync(
+                        healthCheckService,
+                        predicate: check => check.Tags.Contains(ReadyTag, StringComparer.OrdinalIgnoreCase),
+                        cancellationToken))
             .AllowAnonymous()
             .WithName("GetReadinessHealth")
-            .WithTags("Health Checks");
+            .WithTags("Health Checks")
+            .WithSummary("Get readiness health")
+            .WithDescription("Checks whether the API is ready to serve traffic.")
+            .Produces<HealthCheckResponse>(StatusCodes.Status200OK, JsonContentType)
+            .Produces<HealthCheckResponse>(StatusCodes.Status503ServiceUnavailable, JsonContentType);
 
         return endpoints;
     }
 
-    private static Task WriteHealthCheckResponseAsync(HttpContext context, HealthReport report)
+    private static async Task<IResult> ExecuteHealthCheckAsync(
+        HealthCheckService healthCheckService,
+        Func<HealthCheckRegistration, bool> predicate,
+        CancellationToken cancellationToken)
     {
-        context.Response.ContentType = "application/json";
+        var report = await healthCheckService.CheckHealthAsync(predicate, cancellationToken);
 
         var response = new HealthCheckResponse(
             Status: report.Status.ToString(),
@@ -67,15 +82,27 @@ public static class HealthCheckExtensions
                     Description: entry.Value.Description,
                     Duration: entry.Value.Duration)));
 
-        return context.Response.WriteAsJsonAsync(response);
+        var statusCode = GetStatusCode(report.Status);
+
+        return Results.Json(
+            response,
+            contentType: JsonContentType,
+            statusCode: statusCode);
     }
 
-    private sealed record HealthCheckResponse(
+    private static int GetStatusCode(HealthStatus status)
+    {
+        return status == HealthStatus.Unhealthy
+            ? StatusCodes.Status503ServiceUnavailable
+            : StatusCodes.Status200OK;
+    }
+
+    public sealed record HealthCheckResponse(
         string Status,
         TimeSpan TotalDuration,
         IReadOnlyDictionary<string, HealthCheckEntryResponse> Entries);
 
-    private sealed record HealthCheckEntryResponse(
+    public sealed record HealthCheckEntryResponse(
         string Status,
         string? Description,
         TimeSpan Duration);

@@ -15,8 +15,12 @@ public static class RootEndpointExtensions
         endpoints.MapGet("/", () => Results.Ok(new ApiStatusResponse(
                 Application: applicationOptions.DisplayName,
                 Status: "Running")))
+            .AllowAnonymous()
             .WithName("GetApiStatus")
-            .WithTags("Status");
+            .WithTags("Status")
+            .WithSummary("Get API status")
+            .WithDescription("Returns the current Spendly API status.")
+            .Produces<ApiStatusResponse>();
 
         return endpoints;
     }
