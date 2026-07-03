@@ -16,9 +16,9 @@ public static class ConfigurationOptionsExtensions
         services.AddOptions<HealthChecksOptions>()
             .Bind(configuration.GetRequiredSection(HealthChecksOptions.SectionName))
             .Validate(options => !string.IsNullOrWhiteSpace(options.LivePath), "HealthChecks:LivePath is required.")
-            .Validate(options => options.LivePath.StartsWith('/'), "HealthChecks:LivePath must start with '/'.")
+            .Validate(options => options.LivePath.StartsWith("/", StringComparison.Ordinal), "HealthChecks:LivePath must start with '/'.")
             .Validate(options => !string.IsNullOrWhiteSpace(options.ReadyPath), "HealthChecks:ReadyPath is required.")
-            .Validate(options => options.ReadyPath.StartsWith('/'), "HealthChecks:ReadyPath must start with '/'.")
+            .Validate(options => options.ReadyPath.StartsWith("/", StringComparison.Ordinal), "HealthChecks:ReadyPath must start with '/'.")
             .Validate(
                 options => !string.Equals(options.LivePath, options.ReadyPath, StringComparison.OrdinalIgnoreCase),
                 "HealthChecks:LivePath and HealthChecks:ReadyPath must be different.")
@@ -29,6 +29,16 @@ public static class ConfigurationOptionsExtensions
             .Validate(options => !string.IsNullOrWhiteSpace(options.DocumentName), "OpenApi:DocumentName is required.")
             .Validate(options => !string.IsNullOrWhiteSpace(options.Endpoint), "OpenApi:Endpoint is required.")
             .Validate(options => options.Endpoint.StartsWith("/", StringComparison.Ordinal), "OpenApi:Endpoint must start with '/'.")
+            .Validate(
+                options => options.Endpoint.Contains("{documentName}", StringComparison.Ordinal),
+                "OpenApi:Endpoint must contain '{documentName}'.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.ScalarEndpoint), "OpenApi:ScalarEndpoint is required.")
+            .Validate(
+                options => options.ScalarEndpoint.StartsWith("/", StringComparison.Ordinal),
+                "OpenApi:ScalarEndpoint must start with '/'.")
+            .Validate(
+                options => !string.Equals(options.Endpoint, options.ScalarEndpoint, StringComparison.OrdinalIgnoreCase),
+                "OpenApi:Endpoint and OpenApi:ScalarEndpoint must be different.")
             .ValidateOnStart();
 
         services.AddOptions<InfrastructureOptions>()

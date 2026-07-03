@@ -9,4 +9,6 @@ public sealed class OpenApiOptions
     public string DocumentName { get; init; } = string.Empty;
 
     public string Endpoint { get; init; } = string.Empty;
+
+    public string ScalarEndpoint { get; init; } = string.Empty;
 }
