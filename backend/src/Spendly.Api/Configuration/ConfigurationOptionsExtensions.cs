@@ -15,8 +15,13 @@ public static class ConfigurationOptionsExtensions
 
         services.AddOptions<HealthChecksOptions>()
             .Bind(configuration.GetRequiredSection(HealthChecksOptions.SectionName))
-            .Validate(options => !string.IsNullOrWhiteSpace(options.Path), "HealthChecks:Path is required.")
-            .Validate(options => options.Path.StartsWith("/", StringComparison.Ordinal), "HealthChecks:Path must start with '/'.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.LivePath), "HealthChecks:LivePath is required.")
+            .Validate(options => options.LivePath.StartsWith('/'), "HealthChecks:LivePath must start with '/'.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.ReadyPath), "HealthChecks:ReadyPath is required.")
+            .Validate(options => options.ReadyPath.StartsWith('/'), "HealthChecks:ReadyPath must start with '/'.")
+            .Validate(
+                options => !string.Equals(options.LivePath, options.ReadyPath, StringComparison.OrdinalIgnoreCase),
+                "HealthChecks:LivePath and HealthChecks:ReadyPath must be different.")
             .ValidateOnStart();
 
         services.AddOptions<OpenApiOptions>()
