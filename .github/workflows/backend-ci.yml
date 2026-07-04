@@ -14,25 +14,44 @@ on:
       - ".github/workflows/backend-ci.yml"
       - "global.json"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  BUILD_CONFIGURATION: Release
+  SOLUTION_PATH: backend/Spendly.sln
+  UNIT_TESTS_PROJECT: backend/tests/Spendly.UnitTests/Spendly.UnitTests.csproj
+  INTEGRATION_TESTS_PROJECT: backend/tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj
+
 jobs:
-  build:
-    name: Build and test backend
+  backend-ci:
+    name: Restore, build and test backend
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore backend/Spendly.sln
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       - name: Build
-        run: dotnet build backend/Spendly.sln --configuration Release --no-restore
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
-      - name: Test
-        run: dotnet test backend/Spendly.sln --configuration Release --no-build
+      - name: Unit tests
+        run: dotnet test ${{ env.UNIT_TESTS_PROJECT }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
+
+      - name: Integration tests
+        run: dotnet test ${{ env.INTEGRATION_TESTS_PROJECT }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
