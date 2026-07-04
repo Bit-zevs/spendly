@@ -2,14 +2,43 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Spendly.IntegrationTests;
 
-public sealed class ApiProblemDetailsTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ApiProblemDetailsTests(SpendlyApiFactory factory)
+    : IClassFixture<SpendlyApiFactory>
 {
+    [Fact]
+    public async Task UnknownEndpoint_ShouldReturnProblemDetails()
+    {
+        var client = factory.CreateApiClient();
+
+        using var response = await client.GetAsync(
+            TestApiConstants.UnknownEndpointPath,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.Equal("https://httpstatuses.com/404", root.GetProperty("type").GetString());
+        Assert.Equal("Not Found", root.GetProperty("title").GetString());
+        Assert.Equal(404, root.GetProperty("status").GetInt32());
+        Assert.Equal("The requested resource was not found.", root.GetProperty("detail").GetString());
+        Assert.Equal("not_found", root.GetProperty("code").GetString());
+
+        Assert.True(root.TryGetProperty("instance", out var instance));
+        Assert.Equal(TestApiConstants.UnknownEndpointPath, instance.GetString());
+
+        Assert.True(root.TryGetProperty("traceId", out var traceId));
+        Assert.False(string.IsNullOrWhiteSpace(traceId.GetString()));
+    }
+
     [Fact]
     public async Task UnhandledException_ShouldReturnProblemDetailsWithoutTechnicalDetails()
     {
@@ -55,36 +84,6 @@ public sealed class ApiProblemDetailsTests(WebApplicationFactory<Program> factor
         Assert.DoesNotContain("InvalidOperationException", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("StackTrace", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Microsoft.AspNetCore", json, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task UnknownEndpoint_ShouldReturnProblemDetails()
-    {
-        var client = factory.CreateApiClient();
-
-        using var response = await client.GetAsync(
-            TestApiConstants.UnknownEndpointPath,
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-
-        var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-
-        using var document = JsonDocument.Parse(json);
-        var root = document.RootElement;
-
-        Assert.Equal("https://httpstatuses.com/404", root.GetProperty("type").GetString());
-        Assert.Equal("Not Found", root.GetProperty("title").GetString());
-        Assert.Equal(404, root.GetProperty("status").GetInt32());
-        Assert.Equal("The requested resource was not found.", root.GetProperty("detail").GetString());
-        Assert.Equal("not_found", root.GetProperty("code").GetString());
-
-        Assert.True(root.TryGetProperty("instance", out var instance));
-        Assert.Equal(TestApiConstants.UnknownEndpointPath, instance.GetString());
-
-        Assert.True(root.TryGetProperty("traceId", out var traceId));
-        Assert.False(string.IsNullOrWhiteSpace(traceId.GetString()));
     }
 }
 

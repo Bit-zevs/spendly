@@ -2,6 +2,7 @@ namespace Spendly.IntegrationTests;
 
 internal static class TestApiConstants
 {
+    public const string TestingEnvironment = "Testing";
     public const string DevelopmentEnvironment = "Development";
     public const string ProductionEnvironment = "Production";
 
@@ -14,7 +15,6 @@ internal static class TestApiConstants
     public const string LivenessHealthPath = "/health/live";
     public const string ReadinessHealthPath = "/health/ready";
     public const string UnknownEndpointPath = "/api/unknown-endpoint";
-    public const string WeatherForecastPath = "/weatherforecast";
     public const string TestUnhandledExceptionPath = "/tests/unhandled-exception";
 
     public const string OpenApiEnabledConfigurationKey = "OpenApi:Enabled";

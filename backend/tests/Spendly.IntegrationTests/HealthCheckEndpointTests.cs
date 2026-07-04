@@ -1,11 +1,10 @@
 using System.Net;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Spendly.IntegrationTests;
 
-public sealed class HealthCheckEndpointTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class HealthCheckEndpointTests(SpendlyApiFactory factory)
+    : IClassFixture<SpendlyApiFactory>
 {
     [Theory]
     [InlineData(TestApiConstants.LivenessHealthPath)]
