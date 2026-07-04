@@ -1,6 +1,7 @@
 using Spendly.Api.Endpoints;
 using Spendly.Api.Errors;
 using Spendly.Api.Health;
+using Spendly.Api.Logging;
 using Spendly.Api.OpenApi;
 
 namespace Spendly.Api.Extensions;
@@ -11,6 +12,8 @@ public static class WebApplicationExtensions
     {
         public WebApplication UseApiPipeline()
         {
+            app.UseApiRequestLogging();
+
             app.UseApiProblemDetails();
 
             app.UseHttpsRedirection();
