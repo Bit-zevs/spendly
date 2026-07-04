@@ -8,6 +8,7 @@ internal static class TestApiConstants
 
     public const string ApiTitle = "Spendly API";
     public const string ApiVersion = "v0.2";
+    public const string RunningStatus = "Running";
 
     public const string RootPath = "/";
     public const string DocsPath = "/docs";
