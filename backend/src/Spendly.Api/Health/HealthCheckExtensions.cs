@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Spendly.Api.Configuration;
+using Spendly.Api.Contracts.Health;
 
 namespace Spendly.Api.Health;
 
@@ -96,14 +97,4 @@ public static class HealthCheckExtensions
             ? StatusCodes.Status503ServiceUnavailable
             : StatusCodes.Status200OK;
     }
-
-    public sealed record HealthCheckResponse(
-        string Status,
-        TimeSpan TotalDuration,
-        IReadOnlyDictionary<string, HealthCheckEntryResponse> Entries);
-
-    public sealed record HealthCheckEntryResponse(
-        string Status,
-        string? Description,
-        TimeSpan Duration);
 }

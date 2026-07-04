@@ -8,15 +8,11 @@ public sealed class HealthCheckEndpointTests(WebApplicationFactory<Program> fact
     : IClassFixture<WebApplicationFactory<Program>>
 {
     [Theory]
-    [InlineData("/health/live")]
-    [InlineData("/health/ready")]
+    [InlineData(TestApiConstants.LivenessHealthPath)]
+    [InlineData(TestApiConstants.ReadinessHealthPath)]
     public async Task HealthEndpoint_ShouldReturnHealthyJsonResponse(string path)
     {
-        var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-            BaseAddress = new Uri("https://localhost")
-        });
+        var client = factory.CreateApiClient();
 
         using var response = await client.GetAsync(
             path,
@@ -38,14 +34,10 @@ public sealed class HealthCheckEndpointTests(WebApplicationFactory<Program> fact
     [Fact]
     public async Task LivenessHealthEndpoint_ShouldNotRunReadinessChecks()
     {
-        var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-            BaseAddress = new Uri("https://localhost")
-        });
+        var client = factory.CreateApiClient();
 
         using var response = await client.GetAsync(
-            "/health/live",
+            TestApiConstants.LivenessHealthPath,
             TestContext.Current.CancellationToken);
 
         var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -60,14 +52,10 @@ public sealed class HealthCheckEndpointTests(WebApplicationFactory<Program> fact
     [Fact]
     public async Task ReadinessHealthEndpoint_ShouldRunSelfCheck()
     {
-        var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-            BaseAddress = new Uri("https://localhost")
-        });
+        var client = factory.CreateApiClient();
 
         using var response = await client.GetAsync(
-            "/health/ready",
+            TestApiConstants.ReadinessHealthPath,
             TestContext.Current.CancellationToken);
 
         var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);

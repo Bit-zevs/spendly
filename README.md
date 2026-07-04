@@ -54,6 +54,8 @@ The main goal of Spendly is to help users understand how much money they can saf
 
 ### Build backend
 
+From the repository root:
+
 ```bash
 cd backend
 dotnet restore Spendly.sln
@@ -63,8 +65,30 @@ dotnet test Spendly.sln
 
 ### Run PostgreSQL
 
+From the repository root:
+
 ```bash
 docker compose -f deploy/docker-compose.yml up -d
+```
+### Run API
+
+From the repository root:
+```bash
+cd backend
+dotnet run --project src/Spendly.Api/Spendly.Api.csproj --launch-profile https
+```
+
+After the API starts, the development documentation UI is available at:
+
+```
+https://localhost:7037/docs
+```
+
+Health endpoints:
+
+```
+https://localhost:7037/health/live
+https://localhost:7037/health/ready
 ```
 
 ## Project status

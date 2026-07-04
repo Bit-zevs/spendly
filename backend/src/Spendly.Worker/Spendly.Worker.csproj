@@ -1,9 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-Spendly.Worker-1ea9d703-7def-47b4-be5b-2f6a6d2e684b</UserSecretsId>
     </PropertyGroup>
 

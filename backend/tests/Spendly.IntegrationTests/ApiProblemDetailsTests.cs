@@ -16,7 +16,7 @@ public sealed class ApiProblemDetailsTests(WebApplicationFactory<Program> factor
         var client = factory
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Production");
+                builder.UseEnvironment(TestApiConstants.ProductionEnvironment);
 
                 builder.ConfigureServices(services =>
                 {
@@ -25,14 +25,10 @@ public sealed class ApiProblemDetailsTests(WebApplicationFactory<Program> factor
                         .AddApplicationPart(typeof(ThrowUnhandledExceptionController).Assembly);
                 });
             })
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = new Uri("https://localhost")
-            });
+            .CreateApiClient();
 
         using var response = await client.GetAsync(
-            "/tests/unhandled-exception",
+            TestApiConstants.TestUnhandledExceptionPath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -50,7 +46,7 @@ public sealed class ApiProblemDetailsTests(WebApplicationFactory<Program> factor
         Assert.Equal("internal_server_error", root.GetProperty("code").GetString());
 
         Assert.True(root.TryGetProperty("instance", out var instance));
-        Assert.Equal("/tests/unhandled-exception", instance.GetString());
+        Assert.Equal(TestApiConstants.TestUnhandledExceptionPath, instance.GetString());
 
         Assert.True(root.TryGetProperty("traceId", out var traceId));
         Assert.False(string.IsNullOrWhiteSpace(traceId.GetString()));
@@ -64,14 +60,10 @@ public sealed class ApiProblemDetailsTests(WebApplicationFactory<Program> factor
     [Fact]
     public async Task UnknownEndpoint_ShouldReturnProblemDetails()
     {
-        var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-            BaseAddress = new Uri("https://localhost")
-        });
+        var client = factory.CreateApiClient();
 
         using var response = await client.GetAsync(
-            "/api/unknown-endpoint",
+            TestApiConstants.UnknownEndpointPath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -89,7 +81,7 @@ public sealed class ApiProblemDetailsTests(WebApplicationFactory<Program> factor
         Assert.Equal("not_found", root.GetProperty("code").GetString());
 
         Assert.True(root.TryGetProperty("instance", out var instance));
-        Assert.Equal("/api/unknown-endpoint", instance.GetString());
+        Assert.Equal(TestApiConstants.UnknownEndpointPath, instance.GetString());
 
         Assert.True(root.TryGetProperty("traceId", out var traceId));
         Assert.False(string.IsNullOrWhiteSpace(traceId.GetString()));

@@ -9,14 +9,12 @@ public static class ApiLoggingExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        builder.Services.AddSerilog(
-            (services, loggerConfiguration) =>
-            {
-                loggerConfiguration
-                    .ReadFrom.Configuration(builder.Configuration)
-                    .ReadFrom.Services(services);
-            },
-            preserveStaticLogger: true);
+        builder.Services.AddSerilog((services, loggerConfiguration) =>
+        {
+            loggerConfiguration
+                .ReadFrom.Configuration(builder.Configuration)
+                .ReadFrom.Services(services);
+        });
 
         return builder;
     }
