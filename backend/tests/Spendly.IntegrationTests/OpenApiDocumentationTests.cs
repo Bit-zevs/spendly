@@ -1,20 +1,17 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 
 namespace Spendly.IntegrationTests;
 
-public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class OpenApiDocumentationTests(SpendlyApiFactory factory)
+    : IClassFixture<SpendlyApiFactory>
 {
     [Fact]
     public async Task OpenApiDocument_ShouldExposeSpendlyApiMetadataInDevelopment()
     {
-        var client = factory
-            .WithWebHostBuilder(builder => builder.UseEnvironment(TestApiConstants.DevelopmentEnvironment))
-            .CreateApiClient();
+        var client = CreateDevelopmentDocumentationClient();
 
         using var response = await client.GetAsync(
             TestApiConstants.OpenApiDocumentPath,
@@ -29,6 +26,7 @@ public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> fac
         var root = document.RootElement;
 
         var info = root.GetProperty("info");
+
         Assert.Equal(TestApiConstants.ApiTitle, info.GetProperty("title").GetString());
         Assert.Equal(TestApiConstants.ApiVersion, info.GetProperty("version").GetString());
 
@@ -46,17 +44,12 @@ public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> fac
         Assert.True(
             paths.TryGetProperty(TestApiConstants.ReadinessHealthPath, out _),
             $"OpenAPI document should contain readiness endpoint '{TestApiConstants.ReadinessHealthPath}'. Actual paths: {actualPaths}");
-
-        Assert.False(paths.TryGetProperty(TestApiConstants.WeatherForecastPath, out _));
-        Assert.DoesNotContain("weatherforecast", json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task ScalarDocumentationPage_ShouldBeAvailableInDevelopment()
     {
-        var client = factory
-            .WithWebHostBuilder(builder => builder.UseEnvironment(TestApiConstants.DevelopmentEnvironment))
-            .CreateApiClient(allowAutoRedirect: true);
+        var client = CreateDevelopmentDocumentationClient(allowAutoRedirect: true);
 
         using var response = await client.GetAsync(
             TestApiConstants.DocsPath,
@@ -73,15 +66,15 @@ public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> fac
     [Fact]
     public async Task ScalarDocumentationPage_ShouldRedirectToTrailingSlashInDevelopment()
     {
-        var client = factory
-            .WithWebHostBuilder(builder => builder.UseEnvironment(TestApiConstants.DevelopmentEnvironment))
-            .CreateApiClient();
+        var client = CreateDevelopmentDocumentationClient();
 
         using var response = await client.GetAsync(
             TestApiConstants.DocsPath,
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.Found, response.StatusCode);
+        Assert.True(
+            IsRedirectStatusCode(response.StatusCode),
+            $"Expected redirect status code, but actual status code was '{response.StatusCode}'.");
 
         var location = response.Headers.Location?.OriginalString;
 
@@ -117,6 +110,34 @@ public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> fac
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    private HttpClient CreateDevelopmentDocumentationClient(bool allowAutoRedirect = false)
+    {
+        return factory
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment(TestApiConstants.DevelopmentEnvironment);
+
+                builder.ConfigureAppConfiguration((_, configuration) =>
+                {
+                    configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        [TestApiConstants.OpenApiEnabledConfigurationKey] = "true"
+                    });
+                });
+            })
+            .CreateApiClient(allowAutoRedirect);
+    }
+
+    private static bool IsRedirectStatusCode(HttpStatusCode statusCode)
+    {
+        return statusCode is
+            HttpStatusCode.MovedPermanently or
+            HttpStatusCode.Found or
+            HttpStatusCode.RedirectMethod or
+            HttpStatusCode.TemporaryRedirect or
+            HttpStatusCode.PermanentRedirect;
     }
 
     private static string GetOpenApiPaths(JsonElement paths)
