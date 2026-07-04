@@ -85,6 +85,37 @@ public sealed class ApiProblemDetailsTests(SpendlyApiFactory factory)
         Assert.DoesNotContain("StackTrace", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Microsoft.AspNetCore", json, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task UnsupportedHttpMethod_ShouldReturnProblemDetails()
+    {
+        var client = factory.CreateApiClient();
+
+        using var response = await client.PostAsync(
+            TestApiConstants.RootPath,
+            null,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.Equal("https://httpstatuses.com/405", root.GetProperty("type").GetString());
+        Assert.Equal("Method Not Allowed", root.GetProperty("title").GetString());
+        Assert.Equal(405, root.GetProperty("status").GetInt32());
+        Assert.Equal("An error occurred while processing the request.", root.GetProperty("detail").GetString());
+        Assert.Equal("http_error", root.GetProperty("code").GetString());
+
+        Assert.True(root.TryGetProperty("instance", out var instance));
+        Assert.Equal(TestApiConstants.RootPath, instance.GetString());
+
+        Assert.True(root.TryGetProperty("traceId", out var traceId));
+        Assert.False(string.IsNullOrWhiteSpace(traceId.GetString()));
+    }
 }
 
 [ApiController]
