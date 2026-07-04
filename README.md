@@ -75,20 +75,20 @@ docker compose -f deploy/docker-compose.yml up -d
 From the repository root:
 ```bash
 cd backend
-dotnet run --project src/Spendly.Api/Spendly.Api.csproj
+dotnet run --project src/Spendly.Api/Spendly.Api.csproj --launch-profile https
 ```
 
 After the API starts, the development documentation UI is available at:
 
 ```
-https://localhost:7080/docs
+https://localhost:7037/docs
 ```
 
 Health endpoints:
 
 ```
-https://localhost:7080/health/live
-https://localhost:7080/health/ready
+https://localhost:7037/health/live
+https://localhost:7037/health/ready
 ```
 
 ## Project status

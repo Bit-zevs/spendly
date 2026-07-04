@@ -4,13 +4,13 @@ Spendly backend starts as a modular monolith with Clean Architecture Lite.
 
 ## Projects
 
-- Spendly.Domain вЂ” domain entities, value objects and domain rules.
-- Spendly.Application вЂ” use cases, commands, queries, validators and interfaces.
-- Spendly.Infrastructure вЂ” database, external integrations and infrastructure implementations.
-- Spendly.Api вЂ” HTTP API.
-- Spendly.Worker вЂ” background jobs.
-- Spendly.UnitTests вЂ” unit tests.
-- Spendly.IntegrationTests вЂ” API and infrastructure integration tests.
+- Spendly.Domain — domain entities, value objects and domain rules.
+- Spendly.Application — use cases, commands, queries, validators and interfaces.
+- Spendly.Infrastructure — database, external integrations and infrastructure implementations.
+- Spendly.Api — HTTP API.
+- Spendly.Worker — background jobs.
+- Spendly.UnitTests — unit tests.
+- Spendly.IntegrationTests — API and infrastructure integration tests.
 
 ## Dependency rule
 
