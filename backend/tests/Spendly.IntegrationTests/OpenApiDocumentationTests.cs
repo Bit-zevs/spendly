@@ -9,38 +9,15 @@ namespace Spendly.IntegrationTests;
 public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> factory)
     : IClassFixture<WebApplicationFactory<Program>>
 {
-    private const string DevelopmentEnvironment = "Development";
-    private const string ProductionEnvironment = "Production";
-
-    private const string ExpectedApiTitle = "Spendly API";
-    private const string ExpectedApiVersion = "v0.2";
-
-    private const string DocsPath = "/docs";
-    private const string DocsPathWithTrailingSlash = "/docs/";
-
-    private const string RootPath = "/";
-    private const string LivenessHealthPath = "/health/live";
-    private const string ReadinessHealthPath = "/health/ready";
-    private const string WeatherForecastPath = "/weatherforecast";
-
-    private const string OpenApiEnabledConfigurationKey = "OpenApi:Enabled";
-    private const string OpenApiDocumentPath = "/openapi/" + ExpectedApiVersion + ".json";
-
-    private static readonly Uri TestBaseAddress = new("https://localhost");
-
     [Fact]
     public async Task OpenApiDocument_ShouldExposeSpendlyApiMetadataInDevelopment()
     {
         var client = factory
-            .WithWebHostBuilder(builder => builder.UseEnvironment(DevelopmentEnvironment))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = TestBaseAddress
-            });
+            .WithWebHostBuilder(builder => builder.UseEnvironment(TestApiConstants.DevelopmentEnvironment))
+            .CreateApiClient();
 
         using var response = await client.GetAsync(
-            OpenApiDocumentPath,
+            TestApiConstants.OpenApiDocumentPath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -52,25 +29,25 @@ public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> fac
         var root = document.RootElement;
 
         var info = root.GetProperty("info");
-        Assert.Equal(ExpectedApiTitle, info.GetProperty("title").GetString());
-        Assert.Equal(ExpectedApiVersion, info.GetProperty("version").GetString());
+        Assert.Equal(TestApiConstants.ApiTitle, info.GetProperty("title").GetString());
+        Assert.Equal(TestApiConstants.ApiVersion, info.GetProperty("version").GetString());
 
         var paths = root.GetProperty("paths");
         var actualPaths = GetOpenApiPaths(paths);
 
         Assert.True(
-            paths.TryGetProperty(RootPath, out _),
-            $"OpenAPI document should contain root endpoint '{RootPath}'. Actual paths: {actualPaths}");
+            paths.TryGetProperty(TestApiConstants.RootPath, out _),
+            $"OpenAPI document should contain root endpoint '{TestApiConstants.RootPath}'. Actual paths: {actualPaths}");
 
         Assert.True(
-            paths.TryGetProperty(LivenessHealthPath, out _),
-            $"OpenAPI document should contain liveness endpoint '{LivenessHealthPath}'. Actual paths: {actualPaths}");
+            paths.TryGetProperty(TestApiConstants.LivenessHealthPath, out _),
+            $"OpenAPI document should contain liveness endpoint '{TestApiConstants.LivenessHealthPath}'. Actual paths: {actualPaths}");
 
         Assert.True(
-            paths.TryGetProperty(ReadinessHealthPath, out _),
-            $"OpenAPI document should contain readiness endpoint '{ReadinessHealthPath}'. Actual paths: {actualPaths}");
+            paths.TryGetProperty(TestApiConstants.ReadinessHealthPath, out _),
+            $"OpenAPI document should contain readiness endpoint '{TestApiConstants.ReadinessHealthPath}'. Actual paths: {actualPaths}");
 
-        Assert.False(paths.TryGetProperty(WeatherForecastPath, out _));
+        Assert.False(paths.TryGetProperty(TestApiConstants.WeatherForecastPath, out _));
         Assert.DoesNotContain("weatherforecast", json, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -78,15 +55,11 @@ public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> fac
     public async Task ScalarDocumentationPage_ShouldBeAvailableInDevelopment()
     {
         var client = factory
-            .WithWebHostBuilder(builder => builder.UseEnvironment(DevelopmentEnvironment))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = true,
-                BaseAddress = TestBaseAddress
-            });
+            .WithWebHostBuilder(builder => builder.UseEnvironment(TestApiConstants.DevelopmentEnvironment))
+            .CreateApiClient(allowAutoRedirect: true);
 
         using var response = await client.GetAsync(
-            DocsPath,
+            TestApiConstants.DocsPath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -94,22 +67,18 @@ public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> fac
 
         var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains(ExpectedApiTitle, html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(TestApiConstants.ApiTitle, html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task ScalarDocumentationPage_ShouldRedirectToTrailingSlashInDevelopment()
     {
         var client = factory
-            .WithWebHostBuilder(builder => builder.UseEnvironment(DevelopmentEnvironment))
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = TestBaseAddress
-            });
+            .WithWebHostBuilder(builder => builder.UseEnvironment(TestApiConstants.DevelopmentEnvironment))
+            .CreateApiClient();
 
         using var response = await client.GetAsync(
-            DocsPath,
+            TestApiConstants.DocsPath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Found, response.StatusCode);
@@ -119,33 +88,29 @@ public sealed class OpenApiDocumentationTests(WebApplicationFactory<Program> fac
         Assert.False(string.IsNullOrWhiteSpace(location));
         Assert.True(
             location.EndsWith("docs/", StringComparison.OrdinalIgnoreCase),
-            $"Expected redirect to 'docs/' or '{DocsPathWithTrailingSlash}', but actual Location was '{location}'.");
+            $"Expected redirect to 'docs/' or '{TestApiConstants.DocsPathWithTrailingSlash}', but actual Location was '{location}'.");
     }
 
     [Theory]
-    [InlineData(DocsPath)]
-    [InlineData(DocsPathWithTrailingSlash)]
-    [InlineData(OpenApiDocumentPath)]
+    [InlineData(TestApiConstants.DocsPath)]
+    [InlineData(TestApiConstants.DocsPathWithTrailingSlash)]
+    [InlineData(TestApiConstants.OpenApiDocumentPath)]
     public async Task OpenApiAndScalar_ShouldNotBeAvailableOutsideDevelopment(string path)
     {
         var client = factory
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment(ProductionEnvironment);
+                builder.UseEnvironment(TestApiConstants.ProductionEnvironment);
 
                 builder.ConfigureAppConfiguration((_, configuration) =>
                 {
                     configuration.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        [OpenApiEnabledConfigurationKey] = "true"
+                        [TestApiConstants.OpenApiEnabledConfigurationKey] = "true"
                     });
                 });
             })
-            .CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                BaseAddress = TestBaseAddress
-            });
+            .CreateApiClient();
 
         using var response = await client.GetAsync(
             path,

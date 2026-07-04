@@ -2,13 +2,13 @@
 using Spendly.Api.Extensions;
 using Spendly.Api.Logging;
 
-using var startupLogger = new LoggerConfiguration()
+Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 
 try
 {
-    startupLogger.Information("Starting Spendly.Api");
+    Log.Information("Starting Spendly.Api");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -25,13 +25,14 @@ try
 }
 catch (Exception exception) when (!IsTestHostAbortException(exception))
 {
-    startupLogger.Fatal(exception, "Spendly.Api terminated unexpectedly");
+    Log.Fatal(exception, "Spendly.Api terminated unexpectedly");
 
     throw;
 }
 finally
 {
-    startupLogger.Information("Stopped Spendly.Api");
+    Log.Information("Stopped Spendly.Api");
+    await Log.CloseAndFlushAsync();
 }
 
 static bool IsTestHostAbortException(Exception exception)
