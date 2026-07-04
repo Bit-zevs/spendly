@@ -17,6 +17,11 @@ internal static class TestApiConstants
     public const string UnknownEndpointPath = "/api/unknown-endpoint";
     public const string TestUnhandledExceptionPath = "/tests/unhandled-exception";
 
+    public const string HealthChecksEnabledConfigurationKey = "HealthChecks:Enabled";
     public const string OpenApiEnabledConfigurationKey = "OpenApi:Enabled";
+    public const string InfrastructureDatabaseProviderConfigurationKey = "Infrastructure:Database:Provider";
+
+    public const string NotConfiguredDatabaseProvider = "NotConfigured";
+
     public const string OpenApiDocumentPath = "/openapi/" + ApiVersion + ".json";
 }
