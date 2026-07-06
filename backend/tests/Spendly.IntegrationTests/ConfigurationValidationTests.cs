@@ -15,7 +15,6 @@ public sealed class ConfigurationValidationTests(SpendlyApiFactory factory)
     [InlineData("HealthChecks:ReadyPath", "", "HealthChecks:ReadyPath is required.")]
     [InlineData("HealthChecks:ReadyPath", "health/ready", "HealthChecks:ReadyPath must start with '/'.")]
     [InlineData("HealthChecks:LivePath", TestApiConstants.ReadinessHealthPath, "HealthChecks:LivePath and HealthChecks:ReadyPath must be different.")]
-    [InlineData("OpenApi:DocumentName", "", "OpenApi:DocumentName is required.")]
     [InlineData("OpenApi:Endpoint", "", "OpenApi:Endpoint is required.")]
     [InlineData("OpenApi:Endpoint", "openapi/{documentName}.json", "OpenApi:Endpoint must start with '/'.")]
     [InlineData("OpenApi:Endpoint", "/openapi/document.json", "OpenApi:Endpoint must contain '{documentName}'.")]

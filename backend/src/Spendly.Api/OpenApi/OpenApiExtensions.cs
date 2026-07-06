@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using Spendly.Api.Configuration;
 
@@ -6,20 +7,13 @@ namespace Spendly.Api.OpenApi;
 
 public static class OpenApiExtensions
 {
-    private const string DefaultDocumentName = "v0.2";
-    private const string DefaultOpenApiEndpoint = "/openapi/{documentName}.json";
-    private const string DefaultScalarEndpoint = "/docs";
+    private const string InvalidConfigurationDocumentName = "invalid-configuration";
 
     public static IServiceCollection AddApiOpenApi(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var documentName = configuration
-            .GetRequiredSection(OpenApiOptions.SectionName)[nameof(OpenApiOptions.DocumentName)];
-
-        documentName = string.IsNullOrWhiteSpace(documentName)
-            ? DefaultDocumentName
-            : documentName;
+        var documentName = GetOpenApiDocumentName(configuration);
 
         services.AddOpenApi(documentName, options =>
         {
@@ -29,7 +23,7 @@ public static class OpenApiExtensions
                     .GetRequiredService<IOptions<ApplicationOptions>>()
                     .Value;
 
-                document.Info = new()
+                document.Info = new OpenApiInfo
                 {
                     Title = applicationOptions.DisplayName,
                     Version = applicationOptions.Version,
@@ -58,17 +52,9 @@ public static class OpenApiExtensions
             .GetRequiredService<IOptions<ApplicationOptions>>()
             .Value;
 
-        var documentName = string.IsNullOrWhiteSpace(openApiOptions.DocumentName)
-            ? DefaultDocumentName
-            : openApiOptions.DocumentName;
-
-        var openApiEndpoint = string.IsNullOrWhiteSpace(openApiOptions.Endpoint)
-            ? DefaultOpenApiEndpoint
-            : openApiOptions.Endpoint;
-
-        var scalarEndpoint = string.IsNullOrWhiteSpace(openApiOptions.ScalarEndpoint)
-            ? DefaultScalarEndpoint
-            : openApiOptions.ScalarEndpoint;
+        var documentName = applicationOptions.Version;
+        var openApiEndpoint = openApiOptions.Endpoint;
+        var scalarEndpoint = openApiOptions.ScalarEndpoint;
 
         app.MapOpenApi(openApiEndpoint)
             .AllowAnonymous();
@@ -88,5 +74,15 @@ public static class OpenApiExtensions
             .AllowAnonymous();
 
         return app;
+    }
+
+    private static string GetOpenApiDocumentName(IConfiguration configuration)
+    {
+        var documentName = configuration
+            .GetRequiredSection(ApplicationOptions.SectionName)[nameof(ApplicationOptions.Version)];
+
+        return string.IsNullOrWhiteSpace(documentName)
+            ? InvalidConfigurationDocumentName
+            : documentName;
     }
 }
