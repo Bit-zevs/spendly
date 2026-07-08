@@ -16,9 +16,14 @@ Domain errors must not depend on API concepts such as HTTP status codes, `Proble
 
 Examples:
 
+- `Currency.Code.Required`
+- `Currency.Code.InvalidFormat`
+- `Money.Amount.Negative`
+- `Money.Amount.NotPositive`
+- `Money.Currency.Required`
+- `Money.Currency.Mismatch`
 - `Wallet.Name.Empty`
 - `Category.Name.Empty`
-- `Money.Amount.Negative`
 - `Transaction.Wallet.Required`
 - `Transaction.Amount.NotPositive`
 
