@@ -7,6 +7,9 @@ public sealed class DomainErrorsTests
     [Fact]
     public void KnownErrors_ShouldHaveStableCodes()
     {
+        Assert.Equal("Currency.Code.Required", DomainErrors.Currency.CodeIsRequired.Code);
+        Assert.Equal("Currency.Code.InvalidFormat", DomainErrors.Currency.CodeHasInvalidFormat.Code);
+
         Assert.Equal("Money.Amount.Negative", DomainErrors.Money.AmountIsNegative.Code);
         Assert.Equal("Money.Amount.NotPositive", DomainErrors.Money.AmountMustBePositive.Code);
         Assert.Equal("Money.Currency.Required", DomainErrors.Money.CurrencyIsRequired.Code);
@@ -50,6 +53,8 @@ public sealed class DomainErrorsTests
     {
         return
         [
+            DomainErrors.Currency.CodeIsRequired,
+            DomainErrors.Currency.CodeHasInvalidFormat,
             DomainErrors.Money.AmountIsNegative,
             DomainErrors.Money.AmountMustBePositive,
             DomainErrors.Money.CurrencyIsRequired,
