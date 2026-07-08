@@ -13,6 +13,7 @@ public sealed class DomainErrorsTests
         Assert.Equal("Money.Amount.Negative", DomainErrors.Money.AmountIsNegative.Code);
         Assert.Equal("Money.Amount.NotPositive", DomainErrors.Money.AmountMustBePositive.Code);
         Assert.Equal("Money.Currency.Required", DomainErrors.Money.CurrencyIsRequired.Code);
+        Assert.Equal("Money.Currency.Mismatch", DomainErrors.Money.CurrencyMismatch.Code);
 
         Assert.Equal("Wallet.Name.Empty", DomainErrors.Wallet.NameIsEmpty.Code);
 
@@ -58,6 +59,7 @@ public sealed class DomainErrorsTests
             DomainErrors.Money.AmountIsNegative,
             DomainErrors.Money.AmountMustBePositive,
             DomainErrors.Money.CurrencyIsRequired,
+            DomainErrors.Money.CurrencyMismatch,
             DomainErrors.Wallet.NameIsEmpty,
             DomainErrors.Category.NameIsEmpty,
             DomainErrors.Transaction.AmountMustBePositive,

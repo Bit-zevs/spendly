@@ -29,6 +29,10 @@ public static class DomainErrors
         public static readonly DomainError CurrencyIsRequired = new(
             "Money.Currency.Required",
             "Money currency is required.");
+
+        public static readonly DomainError CurrencyMismatch = new(
+            "Money.Currency.Mismatch",
+            "Money operations require the same currency.");
     }
 
     public static class Wallet
