@@ -5,6 +5,17 @@ namespace Spendly.Domain.Errors;
 /// </summary>
 public static class DomainErrors
 {
+    public static class Currency
+    {
+        public static readonly DomainError CodeIsRequired = new(
+            "Currency.Code.Required",
+            "Currency code is required.");
+
+        public static readonly DomainError CodeHasInvalidFormat = new(
+            "Currency.Code.InvalidFormat",
+            "Currency code must contain exactly three Latin letters.");
+    }
+
     public static class Money
     {
         public static readonly DomainError AmountIsNegative = new(
