@@ -7,7 +7,18 @@ namespace Spendly.UnitTests.Domain.Wallets;
 
 public sealed class WalletTests
 {
-    public static TheoryData<WalletType> ValidWalletTypes => new()
+    private const string ValidName = "Daily expenses";
+
+    private static readonly DateTimeOffset ValidCreatedAt = new(
+        2026,
+        7,
+        11,
+        12,
+        30,
+        0,
+        TimeSpan.Zero);
+
+    public static TheoryData<WalletType> ValidWalletTypes { get; } = new()
     {
         WalletType.Cash,
         WalletType.DebitCard,
@@ -18,8 +29,9 @@ public sealed class WalletTests
         WalletType.Other
     };
 
-    public static TheoryData<string> BlankNames => new()
+    public static TheoryData<string?> InvalidNames { get; } = new()
     {
+        null!,
         string.Empty,
         " ",
         "   ",
@@ -27,9 +39,10 @@ public sealed class WalletTests
         "\r\n"
     };
 
-    public static TheoryData<WalletType> InvalidWalletTypes => new()
+    public static TheoryData<WalletType> InvalidWalletTypes { get; } = new()
     {
-        default(WalletType),
+        null!,
+        (WalletType)(-1),
         (WalletType)8,
         (WalletType)999,
         (WalletType)int.MaxValue
@@ -39,86 +52,69 @@ public sealed class WalletTests
     public void Create_ShouldCreateWallet_WhenArgumentsAreValid()
     {
         var currency = Currency.From("KZT");
-        var createdAt = new DateTimeOffset(
-            2026,
-            7,
-            11,
-            12,
-            30,
-            0,
-            TimeSpan.Zero);
 
         var wallet = Wallet.Create(
-            "Daily expenses",
+            ValidName,
             WalletType.DebitCard,
             currency,
-            createdAt);
+            ValidCreatedAt);
 
         Assert.NotEqual(default(WalletId), wallet.Id);
         Assert.NotEqual(Guid.Empty, wallet.Id.Value);
         Assert.Equal(7, wallet.Id.Value.Version);
 
-        Assert.Equal("Daily expenses", wallet.Name);
+        Assert.Equal(ValidName, wallet.Name);
         Assert.Equal(WalletType.DebitCard, wallet.Type);
-        Assert.Same(currency, wallet.Currency);
-        Assert.Equal(createdAt, wallet.CreatedAt);
+        Assert.Equal(currency, wallet.Currency);
+        Assert.Equal(ValidCreatedAt, wallet.CreatedAt);
     }
 
     [Fact]
-    public void Create_ShouldGenerateDifferentIds_ForDifferentWallets()
+    public void Create_ShouldGenerateDifferentIds_WhenCalledForDifferentWallets()
     {
-        var createdAt = new DateTimeOffset(
-            2026,
-            7,
-            11,
-            12,
-            30,
-            0,
-            TimeSpan.Zero);
-
-        var first = Wallet.Create(
+        var firstWallet = Wallet.Create(
             "Cash",
             WalletType.Cash,
             Currency.Rub,
-            createdAt);
+            ValidCreatedAt);
 
-        var second = Wallet.Create(
+        var secondWallet = Wallet.Create(
             "Main card",
             WalletType.DebitCard,
             Currency.Rub,
-            createdAt);
+            ValidCreatedAt);
 
-        Assert.NotEqual(first.Id, second.Id);
-        Assert.NotEqual(first, second);
+        Assert.NotEqual(firstWallet.Id, secondWallet.Id);
+        Assert.NotEqual(firstWallet.Id.Value, secondWallet.Id.Value);
     }
 
     [Fact]
-    public void Create_ShouldTrimWalletName()
+    public void Create_ShouldTrimName()
     {
         var wallet = Wallet.Create(
             "  Main debit card  ",
             WalletType.DebitCard,
             Currency.Rub,
-            DateTimeOffset.UtcNow);
+            ValidCreatedAt);
 
         Assert.Equal("Main debit card", wallet.Name);
     }
 
     [Theory]
     [MemberData(nameof(ValidWalletTypes))]
-    public void Create_ShouldAcceptEveryDefinedWalletType(WalletType type)
+    public void Create_ShouldAcceptType_WhenTypeIsDefined(WalletType type)
     {
         var wallet = Wallet.Create(
-            "Wallet",
+            ValidName,
             type,
             Currency.Usd,
-            DateTimeOffset.UtcNow);
+            ValidCreatedAt);
 
         Assert.Equal(type, wallet.Type);
     }
 
     [Fact]
-    public void Create_ShouldNormalizeCreationTimeToUtc()
+    public void Create_ShouldConvertCreatedAtToUtc()
     {
         var createdAt = new DateTimeOffset(
             2026,
@@ -129,12 +125,6 @@ public sealed class WalletTests
             0,
             TimeSpan.FromHours(5));
 
-        var wallet = Wallet.Create(
-            "Main card",
-            WalletType.DebitCard,
-            Currency.Rub,
-            createdAt);
-
         var expectedCreatedAt = new DateTimeOffset(
             2026,
             7,
@@ -144,25 +134,20 @@ public sealed class WalletTests
             0,
             TimeSpan.Zero);
 
+        var wallet = Wallet.Create(
+            ValidName,
+            WalletType.DebitCard,
+            Currency.Rub,
+            createdAt);
+
         Assert.Equal(expectedCreatedAt, wallet.CreatedAt);
         Assert.Equal(TimeSpan.Zero, wallet.CreatedAt.Offset);
     }
 
-    [Fact]
-    public void Create_ShouldThrowDomainException_WhenNameIsNull()
-    {
-        DomainExceptionAssert.Throws(
-            DomainErrors.Wallet.NameIsEmpty,
-            () => Wallet.Create(
-                null,
-                WalletType.Cash,
-                Currency.Rub,
-                DateTimeOffset.UtcNow));
-    }
-
     [Theory]
-    [MemberData(nameof(BlankNames))]
-    public void Create_ShouldThrowDomainException_WhenNameIsBlank(string name)
+    [MemberData(nameof(InvalidNames))]
+    public void Create_ShouldThrowDomainException_WhenNameIsNullOrWhiteSpace(
+        string? name)
     {
         DomainExceptionAssert.Throws(
             DomainErrors.Wallet.NameIsEmpty,
@@ -170,20 +155,21 @@ public sealed class WalletTests
                 name,
                 WalletType.Cash,
                 Currency.Rub,
-                DateTimeOffset.UtcNow));
+                ValidCreatedAt));
     }
 
     [Theory]
     [MemberData(nameof(InvalidWalletTypes))]
-    public void Create_ShouldThrowDomainException_WhenTypeIsInvalid(WalletType type)
+    public void Create_ShouldThrowDomainException_WhenTypeIsInvalid(
+        WalletType type)
     {
         DomainExceptionAssert.Throws(
             DomainErrors.Wallet.TypeIsInvalid,
             () => Wallet.Create(
-                "Wallet",
+                ValidName,
                 type,
                 Currency.Rub,
-                DateTimeOffset.UtcNow));
+                ValidCreatedAt));
     }
 
     [Fact]
@@ -192,19 +178,19 @@ public sealed class WalletTests
         DomainExceptionAssert.Throws(
             DomainErrors.Wallet.CurrencyIsRequired,
             () => Wallet.Create(
-                "Wallet",
+                ValidName,
                 WalletType.Cash,
                 null,
-                DateTimeOffset.UtcNow));
+                ValidCreatedAt));
     }
 
     [Fact]
-    public void Create_ShouldThrowDomainException_WhenCreatedAtHasDefaultValue()
+    public void Create_ShouldThrowDomainException_WhenCreatedAtIsDefault()
     {
         DomainExceptionAssert.Throws(
             DomainErrors.Wallet.CreatedAtIsInvalid,
             () => Wallet.Create(
-                "Wallet",
+                ValidName,
                 WalletType.Cash,
                 Currency.Rub,
                 default));
