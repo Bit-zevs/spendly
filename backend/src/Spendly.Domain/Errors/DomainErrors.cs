@@ -40,6 +40,18 @@ public static class DomainErrors
         public static readonly DomainError NameIsEmpty = new(
             "Wallet.Name.Empty",
             "Wallet name cannot be empty.");
+
+        public static readonly DomainError TypeIsInvalid = new(
+            "Wallet.Type.Invalid",
+            "Wallet type must be one of the supported values.");
+
+        public static readonly DomainError CurrencyIsRequired = new(
+            "Wallet.Currency.Required",
+            "Wallet currency is required.");
+
+        public static readonly DomainError CreatedAtIsInvalid = new(
+            "Wallet.CreatedAt.Invalid",
+            "Wallet creation time must not be the default value.");
     }
 
     public static class Category
