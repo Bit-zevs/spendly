@@ -1,6 +1,8 @@
 # Transactions
 
-This folder contains the transaction-related domain model.
+Descriptions are optional. Empty or whitespace-only descriptions are stored as
+`null`, while meaningful descriptions are trimmed. Description length is checked
+after trimming and must not exceed `Transaction.MaxDescriptionLength` characters.
 
 ## Current domain types
 
@@ -44,7 +46,8 @@ Every currently supported transaction must:
 - use an income category for an income transaction;
 - use an expense category for an expense transaction;
 - have a non-default occurrence time;
-- have a non-default creation time.
+- have a non-default creation time;
+- have no description longer than `Transaction.MaxDescriptionLength`.
 
 Transaction amounts are always positive. The transaction type defines the
 direction of the money movement.
@@ -59,9 +62,10 @@ Occurrence and creation timestamps are stored in UTC.
 The transaction factory receives a `Category` entity so that it can verify the
 category type.
 
-After validation, the transaction stores only the category identifier. This
-prevents callers from supplying a category identifier and an unrelated category
-type as separate, contradictory values.
+After validation, the transaction stores only the non-nullable category
+identifier. This prevents callers from supplying a category identifier and an
+unrelated category type as separate, contradictory values and reflects that all
+currently supported transactions require a category.
 
 ## Transaction identifiers
 

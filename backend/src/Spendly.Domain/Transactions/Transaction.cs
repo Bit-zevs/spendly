@@ -8,12 +8,14 @@ namespace Spendly.Domain.Transactions;
 
 public sealed class Transaction : Entity<TransactionId>
 {
+    public const int MaxDescriptionLength = 500;
+
     private Transaction(
         TransactionId id,
         TransactionType type,
         Money amount,
         WalletId walletId,
-        CategoryId? categoryId,
+        CategoryId categoryId,
         DateTimeOffset occurredAt,
         string? description,
         DateTimeOffset createdAt)
@@ -35,7 +37,7 @@ public sealed class Transaction : Entity<TransactionId>
 
     public WalletId WalletId { get; }
 
-    public CategoryId? CategoryId { get; }
+    public CategoryId CategoryId { get; }
 
     public DateTimeOffset OccurredAt { get; }
 
@@ -165,9 +167,20 @@ public sealed class Transaction : Entity<TransactionId>
 
     private static string? NormalizeDescription(string? description)
     {
-        return string.IsNullOrWhiteSpace(description)
-            ? null
-            : description.Trim();
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return null;
+        }
+
+        var normalizedDescription = description.Trim();
+
+        if (normalizedDescription.Length > MaxDescriptionLength)
+        {
+            throw new DomainException(
+                DomainErrors.Transaction.DescriptionIsTooLong);
+        }
+
+        return normalizedDescription;
     }
 
     private static DateTimeOffset NormalizeCreatedAt(
