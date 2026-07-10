@@ -152,6 +152,12 @@ public sealed class TransactionTests
     };
 
     [Fact]
+    public void MaxDescriptionLength_ShouldBeFiveHundred()
+    {
+        Assert.Equal(500, Transaction.MaxDescriptionLength);
+    }
+
+    [Fact]
     public void Create_ShouldInitializeExpense_WhenArgumentsAreValid()
     {
         var category = CreateCategory(CategoryType.Expense);
@@ -175,8 +181,7 @@ public sealed class TransactionTests
         Assert.Equal(ValidAmount.Currency, transaction.Amount.Currency);
         Assert.Equal(ValidWalletId, transaction.WalletId);
 
-        Assert.True(transaction.CategoryId.HasValue);
-        Assert.Equal(category.Id, transaction.CategoryId.Value);
+        Assert.Equal(category.Id, transaction.CategoryId);
 
         Assert.Equal(ValidOccurredAt, transaction.OccurredAt);
         Assert.Equal(TimeSpan.Zero, transaction.OccurredAt.Offset);
@@ -201,8 +206,7 @@ public sealed class TransactionTests
             ValidCreatedAt);
 
         Assert.Equal(TransactionType.Income, transaction.Type);
-        Assert.True(transaction.CategoryId.HasValue);
-        Assert.Equal(category.Id, transaction.CategoryId.Value);
+        Assert.Equal(category.Id, transaction.CategoryId);
         Assert.Null(transaction.UpdatedAt);
     }
 
@@ -251,6 +255,65 @@ public sealed class TransactionTests
             ValidCreatedAt);
 
         Assert.Equal(expectedDescription, transaction.Description);
+    }
+
+    [Fact]
+    public void Create_ShouldAcceptDescription_WhenLengthEqualsMaximum()
+    {
+        var description = new string(
+            'a',
+            Transaction.MaxDescriptionLength);
+
+        var transaction = Transaction.Create(
+            TransactionType.Expense,
+            ValidAmount,
+            ValidWalletId,
+            CreateCategory(CategoryType.Expense),
+            ValidOccurredAt,
+            description,
+            ValidCreatedAt);
+
+        Assert.Equal(description, transaction.Description);
+    }
+
+    [Fact]
+    public void Create_ShouldValidateDescriptionLength_AfterTrimming()
+    {
+        var expectedDescription = new string(
+            'a',
+            Transaction.MaxDescriptionLength);
+
+        var description = $"  {expectedDescription}  ";
+
+        var transaction = Transaction.Create(
+            TransactionType.Expense,
+            ValidAmount,
+            ValidWalletId,
+            CreateCategory(CategoryType.Expense),
+            ValidOccurredAt,
+            description,
+            ValidCreatedAt);
+
+        Assert.Equal(expectedDescription, transaction.Description);
+    }
+
+    [Fact]
+    public void Create_ShouldThrowDomainException_WhenDescriptionIsTooLong()
+    {
+        var description = new string(
+            'a',
+            Transaction.MaxDescriptionLength + 1);
+
+        DomainExceptionAssert.Throws(
+            DomainErrors.Transaction.DescriptionIsTooLong,
+            () => Transaction.Create(
+                TransactionType.Expense,
+                ValidAmount,
+                ValidWalletId,
+                CreateCategory(CategoryType.Expense),
+                ValidOccurredAt,
+                description,
+                ValidCreatedAt));
     }
 
     [Theory]

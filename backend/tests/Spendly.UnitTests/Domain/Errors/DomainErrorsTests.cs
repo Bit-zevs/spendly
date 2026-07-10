@@ -92,6 +92,10 @@ public sealed class DomainErrorsTests
             DomainErrors.Transaction.OccurredAtIsInvalid.Code);
 
         Assert.Equal(
+            "Transaction.Description.TooLong",
+            DomainErrors.Transaction.DescriptionIsTooLong.Code);
+
+        Assert.Equal(
             "Transaction.CreatedAt.Invalid",
             DomainErrors.Transaction.CreatedAtIsInvalid.Code);
     }
@@ -152,6 +156,7 @@ public sealed class DomainErrorsTests
             DomainErrors.Transaction.CategoryIsRequired,
             DomainErrors.Transaction.CategoryTypeMismatch,
             DomainErrors.Transaction.OccurredAtIsInvalid,
+            DomainErrors.Transaction.DescriptionIsTooLong,
             DomainErrors.Transaction.CreatedAtIsInvalid
         ];
     }

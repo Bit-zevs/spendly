@@ -103,6 +103,10 @@ public static class DomainErrors
             "Transaction.OccurredAt.Invalid",
             "Transaction occurrence time must not be the default value.");
 
+        public static readonly DomainError DescriptionIsTooLong = new(
+            "Transaction.Description.TooLong",
+            "Transaction description exceeds the maximum allowed length.");
+
         public static readonly DomainError CreatedAtIsInvalid = new(
             "Transaction.CreatedAt.Invalid",
             "Transaction creation time must not be the default value.");
