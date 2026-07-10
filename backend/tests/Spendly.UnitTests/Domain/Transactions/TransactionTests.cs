@@ -36,22 +36,23 @@ public sealed class TransactionTests
         0,
         TimeSpan.Zero);
 
-    public static TheoryData<string?, string?> DescriptionCases { get; } = new()
+    public static TheoryData<string?, string?>
+        DescriptionNormalizationCases { get; } = new()
     {
-        { null!, null! },
-        { string.Empty, null! },
-        { " ", null! },
-        { "   ", null! },
-        { "\t\r\n", null! },
-        { "\u00A0", null! },
+        { null, null },
+        { string.Empty, null },
+        { " ", null },
+        { "   ", null },
+        { "\t\r\n", null },
+        { "\u00A0", null },
         { ValidDescription, ValidDescription },
         { $"  {ValidDescription}  ", ValidDescription },
         { $"\t{ValidDescription}\t", ValidDescription },
         { $"\u2003{ValidDescription}\u2003", ValidDescription }
     };
 
-    public static TheoryData<TransactionType> InvalidTransactionTypes
-        { get; } = new()
+    public static TheoryData<TransactionType>
+        InvalidTransactionTypes { get; } = new()
     {
         (TransactionType)int.MinValue,
         (TransactionType)(-1),
@@ -74,8 +75,8 @@ public sealed class TransactionTests
         }
     };
 
-    public static TheoryData<DateTimeOffset, DateTimeOffset> UtcCases
-        { get; } = new()
+    public static TheoryData<DateTimeOffset, DateTimeOffset>
+        DateNormalizationCases { get; } = new()
     {
         {
             new DateTimeOffset(
@@ -152,13 +153,7 @@ public sealed class TransactionTests
     };
 
     [Fact]
-    public void MaxDescriptionLength_ShouldBeFiveHundred()
-    {
-        Assert.Equal(500, Transaction.MaxDescriptionLength);
-    }
-
-    [Fact]
-    public void Create_ShouldInitializeExpense_WhenArgumentsAreValid()
+    public void Create_ShouldCreateExpense_WhenArgumentsAreValid()
     {
         var category = CreateCategory(CategoryType.Expense);
 
@@ -171,43 +166,46 @@ public sealed class TransactionTests
             ValidDescription,
             ValidCreatedAt);
 
-        Assert.NotEqual(default(TransactionId), transaction.Id);
-        Assert.NotEqual(Guid.Empty, transaction.Id.Value);
-        Assert.Equal(7, transaction.Id.Value.Version);
-
-        Assert.Equal(TransactionType.Expense, transaction.Type);
-        Assert.Equal(ValidAmount, transaction.Amount);
-        Assert.Equal(ValidAmount.Amount, transaction.Amount.Amount);
-        Assert.Equal(ValidAmount.Currency, transaction.Amount.Currency);
-        Assert.Equal(ValidWalletId, transaction.WalletId);
-
-        Assert.Equal(category.Id, transaction.CategoryId);
-
-        Assert.Equal(ValidOccurredAt, transaction.OccurredAt);
-        Assert.Equal(TimeSpan.Zero, transaction.OccurredAt.Offset);
-        Assert.Equal(ValidDescription, transaction.Description);
-        Assert.Equal(ValidCreatedAt, transaction.CreatedAt);
-        Assert.Equal(TimeSpan.Zero, transaction.CreatedAt.Offset);
-        Assert.Null(transaction.UpdatedAt);
+        AssertCreatedTransaction(
+            transaction,
+            TransactionType.Expense,
+            ValidAmount,
+            ValidWalletId,
+            category.Id,
+            ValidOccurredAt,
+            ValidDescription,
+            ValidCreatedAt);
     }
 
     [Fact]
-    public void Create_ShouldInitializeIncome_WhenArgumentsAreValid()
+    public void Create_ShouldCreateIncome_WhenArgumentsAreValid()
     {
+        var amount = Money.Positive(
+            75_000m,
+            Currency.Rub);
+
         var category = CreateCategory(CategoryType.Income);
+
+        const string description = "Monthly salary";
 
         var transaction = Transaction.Create(
             TransactionType.Income,
-            Money.Positive(75_000m, Currency.Rub),
+            amount,
             ValidWalletId,
             category,
             ValidOccurredAt,
-            "Monthly salary",
+            description,
             ValidCreatedAt);
 
-        Assert.Equal(TransactionType.Income, transaction.Type);
-        Assert.Equal(category.Id, transaction.CategoryId);
-        Assert.Null(transaction.UpdatedAt);
+        AssertCreatedTransaction(
+            transaction,
+            TransactionType.Income,
+            amount,
+            ValidWalletId,
+            category.Id,
+            ValidOccurredAt,
+            description,
+            ValidCreatedAt);
     }
 
     [Fact]
@@ -233,28 +231,27 @@ public sealed class TransactionTests
             ValidDescription,
             ValidCreatedAt);
 
-        Assert.NotEqual(firstTransaction.Id, secondTransaction.Id);
+        Assert.NotEqual(
+            firstTransaction.Id,
+            secondTransaction.Id);
+
         Assert.NotEqual(
             firstTransaction.Id.Value,
             secondTransaction.Id.Value);
     }
 
     [Theory]
-    [MemberData(nameof(DescriptionCases))]
+    [MemberData(nameof(DescriptionNormalizationCases))]
     public void Create_ShouldNormalizeDescription(
         string? description,
         string? expectedDescription)
     {
-        var transaction = Transaction.Create(
-            TransactionType.Expense,
-            ValidAmount,
-            ValidWalletId,
-            CreateCategory(CategoryType.Expense),
-            ValidOccurredAt,
-            description,
-            ValidCreatedAt);
+        var transaction = CreateValidExpense(
+            description: description);
 
-        Assert.Equal(expectedDescription, transaction.Description);
+        Assert.Equal(
+            expectedDescription,
+            transaction.Description);
     }
 
     [Fact]
@@ -264,16 +261,12 @@ public sealed class TransactionTests
             'a',
             Transaction.MaxDescriptionLength);
 
-        var transaction = Transaction.Create(
-            TransactionType.Expense,
-            ValidAmount,
-            ValidWalletId,
-            CreateCategory(CategoryType.Expense),
-            ValidOccurredAt,
-            description,
-            ValidCreatedAt);
+        var transaction = CreateValidExpense(
+            description: description);
 
-        Assert.Equal(description, transaction.Description);
+        Assert.Equal(
+            description,
+            transaction.Description);
     }
 
     [Fact]
@@ -285,16 +278,12 @@ public sealed class TransactionTests
 
         var description = $"  {expectedDescription}  ";
 
-        var transaction = Transaction.Create(
-            TransactionType.Expense,
-            ValidAmount,
-            ValidWalletId,
-            CreateCategory(CategoryType.Expense),
-            ValidOccurredAt,
-            description,
-            ValidCreatedAt);
+        var transaction = CreateValidExpense(
+            description: description);
 
-        Assert.Equal(expectedDescription, transaction.Description);
+        Assert.Equal(
+            expectedDescription,
+            transaction.Description);
     }
 
     [Fact]
@@ -306,52 +295,44 @@ public sealed class TransactionTests
 
         DomainExceptionAssert.Throws(
             DomainErrors.Transaction.DescriptionIsTooLong,
-            () => Transaction.Create(
-                TransactionType.Expense,
-                ValidAmount,
-                ValidWalletId,
-                CreateCategory(CategoryType.Expense),
-                ValidOccurredAt,
-                description,
-                ValidCreatedAt));
+            () => CreateValidExpense(
+                description: description));
     }
 
     [Theory]
-    [MemberData(nameof(UtcCases))]
+    [MemberData(nameof(DateNormalizationCases))]
     public void Create_ShouldStoreOccurredAtInUtc(
         DateTimeOffset occurredAt,
         DateTimeOffset expectedOccurredAt)
     {
-        var transaction = Transaction.Create(
-            TransactionType.Expense,
-            ValidAmount,
-            ValidWalletId,
-            CreateCategory(CategoryType.Expense),
-            occurredAt,
-            ValidDescription,
-            ValidCreatedAt);
+        var transaction = CreateValidExpense(
+            occurredAt: occurredAt);
 
-        Assert.Equal(expectedOccurredAt, transaction.OccurredAt);
-        Assert.Equal(TimeSpan.Zero, transaction.OccurredAt.Offset);
+        Assert.Equal(
+            expectedOccurredAt,
+            transaction.OccurredAt);
+
+        Assert.Equal(
+            TimeSpan.Zero,
+            transaction.OccurredAt.Offset);
     }
 
     [Theory]
-    [MemberData(nameof(UtcCases))]
+    [MemberData(nameof(DateNormalizationCases))]
     public void Create_ShouldStoreCreatedAtInUtc(
         DateTimeOffset createdAt,
         DateTimeOffset expectedCreatedAt)
     {
-        var transaction = Transaction.Create(
-            TransactionType.Expense,
-            ValidAmount,
-            ValidWalletId,
-            CreateCategory(CategoryType.Expense),
-            ValidOccurredAt,
-            ValidDescription,
-            createdAt);
+        var transaction = CreateValidExpense(
+            createdAt: createdAt);
 
-        Assert.Equal(expectedCreatedAt, transaction.CreatedAt);
-        Assert.Equal(TimeSpan.Zero, transaction.CreatedAt.Offset);
+        Assert.Equal(
+            expectedCreatedAt,
+            transaction.CreatedAt);
+
+        Assert.Equal(
+            TimeSpan.Zero,
+            transaction.CreatedAt.Offset);
     }
 
     [Theory]
@@ -501,6 +482,21 @@ public sealed class TransactionTests
                 default));
     }
 
+    private static Transaction CreateValidExpense(
+        string? description = ValidDescription,
+        DateTimeOffset? occurredAt = null,
+        DateTimeOffset? createdAt = null)
+    {
+        return Transaction.Create(
+            TransactionType.Expense,
+            ValidAmount,
+            ValidWalletId,
+            CreateCategory(CategoryType.Expense),
+            occurredAt ?? ValidOccurredAt,
+            description,
+            createdAt ?? ValidCreatedAt);
+    }
+
     private static Category CreateCategory(CategoryType type)
     {
         var name = type switch
@@ -517,5 +513,74 @@ public sealed class TransactionTests
             name,
             type,
             ValidCreatedAt);
+    }
+
+    private static void AssertCreatedTransaction(
+        Transaction transaction,
+        TransactionType expectedType,
+        Money expectedAmount,
+        WalletId expectedWalletId,
+        CategoryId expectedCategoryId,
+        DateTimeOffset expectedOccurredAt,
+        string? expectedDescription,
+        DateTimeOffset expectedCreatedAt)
+    {
+        Assert.NotEqual(
+            default(TransactionId),
+            transaction.Id);
+
+        Assert.NotEqual(
+            Guid.Empty,
+            transaction.Id.Value);
+
+        Assert.Equal(
+            7,
+            transaction.Id.Value.Version);
+
+        Assert.Equal(
+            expectedType,
+            transaction.Type);
+
+        Assert.Equal(
+            expectedAmount,
+            transaction.Amount);
+
+        Assert.Equal(
+            expectedAmount.Amount,
+            transaction.Amount.Amount);
+
+        Assert.Equal(
+            expectedAmount.Currency,
+            transaction.Amount.Currency);
+
+        Assert.Equal(
+            expectedWalletId,
+            transaction.WalletId);
+
+        Assert.Equal(
+            expectedCategoryId,
+            transaction.CategoryId);
+
+        Assert.Equal(
+            expectedOccurredAt.ToUniversalTime(),
+            transaction.OccurredAt);
+
+        Assert.Equal(
+            TimeSpan.Zero,
+            transaction.OccurredAt.Offset);
+
+        Assert.Equal(
+            expectedDescription,
+            transaction.Description);
+
+        Assert.Equal(
+            expectedCreatedAt.ToUniversalTime(),
+            transaction.CreatedAt);
+
+        Assert.Equal(
+            TimeSpan.Zero,
+            transaction.CreatedAt.Offset);
+
+        Assert.Null(transaction.UpdatedAt);
     }
 }
