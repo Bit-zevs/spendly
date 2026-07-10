@@ -59,6 +59,14 @@ public static class DomainErrors
         public static readonly DomainError NameIsEmpty = new(
             "Category.Name.Empty",
             "Category name cannot be empty.");
+
+        public static readonly DomainError TypeIsInvalid = new(
+            "Category.Type.Invalid",
+            "Category type must be one of the supported values.");
+
+        public static readonly DomainError CreatedAtIsInvalid = new(
+            "Category.CreatedAt.Invalid",
+            "Category creation time must not be the default value.");
     }
 
     public static class Transaction
