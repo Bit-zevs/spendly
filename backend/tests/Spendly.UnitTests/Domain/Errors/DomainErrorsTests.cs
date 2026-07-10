@@ -21,6 +21,8 @@ public sealed class DomainErrorsTests
         Assert.Equal("Wallet.CreatedAt.Invalid", DomainErrors.Wallet.CreatedAtIsInvalid.Code);
 
         Assert.Equal("Category.Name.Empty", DomainErrors.Category.NameIsEmpty.Code);
+        Assert.Equal("Category.Type.Invalid", DomainErrors.Category.TypeIsInvalid.Code);
+        Assert.Equal("Category.CreatedAt.Invalid", DomainErrors.Category.CreatedAtIsInvalid.Code);
 
         Assert.Equal("Transaction.Amount.NotPositive", DomainErrors.Transaction.AmountMustBePositive.Code);
         Assert.Equal("Transaction.Wallet.Required", DomainErrors.Transaction.WalletIsRequired.Code);
@@ -68,6 +70,8 @@ public sealed class DomainErrorsTests
             DomainErrors.Wallet.CurrencyIsRequired,
             DomainErrors.Wallet.CreatedAtIsInvalid,
             DomainErrors.Category.NameIsEmpty,
+            DomainErrors.Category.TypeIsInvalid,
+            DomainErrors.Category.CreatedAtIsInvalid,
             DomainErrors.Transaction.AmountMustBePositive,
             DomainErrors.Transaction.WalletIsRequired
         ];
