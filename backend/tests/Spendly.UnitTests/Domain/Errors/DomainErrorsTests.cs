@@ -16,6 +16,9 @@ public sealed class DomainErrorsTests
         Assert.Equal("Money.Currency.Mismatch", DomainErrors.Money.CurrencyMismatch.Code);
 
         Assert.Equal("Wallet.Name.Empty", DomainErrors.Wallet.NameIsEmpty.Code);
+        Assert.Equal("Wallet.Type.Invalid", DomainErrors.Wallet.TypeIsInvalid.Code);
+        Assert.Equal("Wallet.Currency.Required", DomainErrors.Wallet.CurrencyIsRequired.Code);
+        Assert.Equal("Wallet.CreatedAt.Invalid", DomainErrors.Wallet.CreatedAtIsInvalid.Code);
 
         Assert.Equal("Category.Name.Empty", DomainErrors.Category.NameIsEmpty.Code);
 
@@ -61,6 +64,9 @@ public sealed class DomainErrorsTests
             DomainErrors.Money.CurrencyIsRequired,
             DomainErrors.Money.CurrencyMismatch,
             DomainErrors.Wallet.NameIsEmpty,
+            DomainErrors.Wallet.TypeIsInvalid,
+            DomainErrors.Wallet.CurrencyIsRequired,
+            DomainErrors.Wallet.CreatedAtIsInvalid,
             DomainErrors.Category.NameIsEmpty,
             DomainErrors.Transaction.AmountMustBePositive,
             DomainErrors.Transaction.WalletIsRequired
