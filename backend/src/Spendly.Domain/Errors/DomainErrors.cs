@@ -71,6 +71,18 @@ public static class DomainErrors
 
     public static class Transaction
     {
+        public static readonly DomainError TypeIsInvalid = new(
+            "Transaction.Type.Invalid",
+            "Transaction type must be one of the defined values.");
+
+        public static readonly DomainError TransferIsNotSupported = new(
+            "Transaction.Transfer.NotSupported",
+            "Transfer transactions are not supported by the current transaction model.");
+
+        public static readonly DomainError AmountIsRequired = new(
+            "Transaction.Amount.Required",
+            "Transaction amount is required.");
+
         public static readonly DomainError AmountMustBePositive = new(
             "Transaction.Amount.NotPositive",
             "Transaction amount must be greater than zero.");
@@ -78,5 +90,21 @@ public static class DomainErrors
         public static readonly DomainError WalletIsRequired = new(
             "Transaction.Wallet.Required",
             "Transaction wallet is required.");
+
+        public static readonly DomainError CategoryIsRequired = new(
+            "Transaction.Category.Required",
+            "Income and expense transactions require a category.");
+
+        public static readonly DomainError CategoryTypeMismatch = new(
+            "Transaction.Category.TypeMismatch",
+            "Transaction category type must match the transaction type.");
+
+        public static readonly DomainError OccurredAtIsInvalid = new(
+            "Transaction.OccurredAt.Invalid",
+            "Transaction occurrence time must not be the default value.");
+
+        public static readonly DomainError CreatedAtIsInvalid = new(
+            "Transaction.CreatedAt.Invalid",
+            "Transaction creation time must not be the default value.");
     }
 }
