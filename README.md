@@ -1,34 +1,91 @@
 ﻿# Spendly
 
-Spendly is a personal finance assistant for expense tracking, budgeting, subscriptions, financial goals and daily safe spending calculation.
+Spendly is a personal finance assistant for tracking expenses, managing budgets,
+monitoring subscriptions, planning financial goals, and calculating daily safe
+spending.
 
-The main goal of Spendly is to help users understand how much money they can safely spend today without breaking their monthly budget.
+The main product goal is to help a user answer:
+
+> How much money can I safely spend today without breaking my monthly budget?
 
 ## Project status
 
-Spendly is in the initial backend foundation stage.
-
-Current backend version:
+The current repository milestone is:
 
 ```text
-v0.2 Backend Foundation
+v0.3 Domain Model
 ```
 
-At this stage the backend contains the basic API foundation:
+The backend foundation introduced in v0.2 remains in place, including:
 
-- ASP.NET Core API project structure
-- application configuration through strongly typed options
-- Serilog request and application logging
-- global error handling with ProblemDetails
-- OpenAPI document generation
-- Scalar API documentation UI
-- liveness and readiness health check endpoints
-- unit and integration test projects
-- backend CI through GitHub Actions
+- ASP.NET Core API hosting;
+- strongly typed configuration;
+- Serilog logging;
+- centralized ProblemDetails error responses;
+- OpenAPI document generation;
+- Scalar API documentation;
+- liveness and readiness health checks;
+- unit and integration test projects;
+- backend CI through GitHub Actions.
 
-Database access and Entity Framework Core are not part of v0.2 yet.
+Version v0.3 adds the first implemented domain model:
 
-## Planned features
+- reusable entity and value object abstractions;
+- strongly typed identifiers;
+- domain errors and domain exceptions;
+- `Currency`;
+- `Money`;
+- `Wallet`;
+- `Category`;
+- `Transaction`;
+- domain unit tests.
+
+The current milestone models business rules only. Wallet, category, and
+transaction use cases are not exposed through HTTP endpoints yet.
+
+## Current implementation boundaries
+
+The following functionality is intentionally not implemented yet:
+
+- user registration and authentication;
+- wallet, category, and transaction API endpoints;
+- application commands and queries;
+- repository interfaces and implementations;
+- Entity Framework Core;
+- `DbContext`;
+- database migrations;
+- PostgreSQL connectivity;
+- persistent wallet balances;
+- budgets;
+- reports;
+- subscriptions;
+- financial goals;
+- recurring transactions.
+
+A PostgreSQL Docker Compose configuration exists as preparation for a future
+persistence milestone, but the current API does not connect to it.
+
+## DateRange decision
+
+`DateRange` is not included in v0.3.
+
+None of the current domain entities requires a date interval, and the correct
+semantics of a reusable range are not known yet. Important unresolved questions
+include:
+
+- whether the range should use `DateOnly` or `DateTimeOffset`;
+- whether both boundaries should be inclusive;
+- whether an open-ended range should be allowed;
+- whether budgets, reports, goals, and subscriptions require the same type;
+- which operations such as `Contains` and `Overlaps` are actually needed.
+
+The value object will be reconsidered when the first real use case requiring a
+date range is implemented.
+
+The complete decision is recorded in
+[ADR 0002](docs/adr/0002-defer-date-range-until-required.md).
+
+## Planned product features
 
 - User accounts
 - Wallets
@@ -61,12 +118,65 @@ spendly/
 ├── deploy/
 │   └── docker-compose.yml
 ├── docs/
+│   ├── adr/
+│   ├── architecture/
+│   └── product/
+├── global.json
 └── README.md
 ```
 
-## Backend technology stack
+## Backend architecture
 
-Currently used in v0.2:
+Spendly currently uses a modular monolith with Clean Architecture Lite.
+
+The dependency direction is:
+
+```text
+Spendly.Domain
+      ↑
+Spendly.Application
+      ↑
+Spendly.Infrastructure
+      ↑
+Spendly.Api / Spendly.Worker
+```
+
+The actual project references are:
+
+```text
+Spendly.Domain
+  └── no project dependencies
+
+Spendly.Application
+  └── Spendly.Domain
+
+Spendly.Infrastructure
+  ├── Spendly.Application
+  └── Spendly.Domain
+
+Spendly.Api
+  ├── Spendly.Application
+  └── Spendly.Infrastructure
+
+Spendly.Worker
+  ├── Spendly.Application
+  └── Spendly.Infrastructure
+```
+
+The Domain project is the innermost layer. Business rules must not depend on
+ASP.NET Core, HTTP, Entity Framework Core, PostgreSQL, background workers, or
+other delivery and persistence mechanisms.
+
+More information:
+
+- [Documentation index](docs/README.md)
+- [Architecture overview](docs/architecture/overview.md)
+- [Domain model](docs/architecture/domain-model.md)
+- [Backend guide](backend/README.md)
+
+## Technology stack
+
+Currently used:
 
 - C#
 - .NET 10
@@ -74,44 +184,57 @@ Currently used in v0.2:
 - Serilog
 - OpenAPI
 - Scalar
-- xUnit
+- xUnit v3
 - GitHub Actions
+- centralized NuGet package version management
 
-Prepared for future stages, but not used by the API in v0.2:
+Prepared for future milestones:
 
 - PostgreSQL
 - Entity Framework Core
+- Docker-based local infrastructure
 
 ## Requirements
 
-Required for backend development:
+Required:
 
 - .NET 10 SDK
 
 Optional:
 
-- Docker Desktop
-- JetBrains Rider, Visual Studio or another C# IDE
+- Docker Desktop;
+- JetBrains Rider;
+- Visual Studio;
+- another C# IDE with .NET 10 support.
 
-The SDK version is pinned in `global.json`.
+The SDK version is pinned in:
 
-## Backend setup
+```text
+global.json
+```
 
-All backend commands should be executed from the repository root unless stated otherwise.
+Shared build settings are stored in:
 
-Go to the backend directory:
+```text
+backend/Directory.Build.props
+```
+
+Centralized NuGet package versions are stored in:
+
+```text
+backend/Directory.Packages.props
+```
+
+## Restore backend dependencies
+
+From the repository root:
 
 ```bash
 cd backend
-```
-
-Restore dependencies:
-
-```bash
 dotnet restore Spendly.sln
 ```
 
-## Build backend
+## Build the backend
 
 From the `backend` directory:
 
@@ -119,15 +242,15 @@ From the `backend` directory:
 dotnet build Spendly.sln
 ```
 
-This builds the full backend solution, including:
+The command builds:
 
-- `Spendly.Api`
-- `Spendly.Application`
-- `Spendly.Domain`
-- `Spendly.Infrastructure`
-- `Spendly.Worker`
-- `Spendly.UnitTests`
-- `Spendly.IntegrationTests`
+- `Spendly.Api`;
+- `Spendly.Application`;
+- `Spendly.Domain`;
+- `Spendly.Infrastructure`;
+- `Spendly.Worker`;
+- `Spendly.UnitTests`;
+- `Spendly.IntegrationTests`.
 
 ## Run tests
 
@@ -137,18 +260,20 @@ From the `backend` directory:
 dotnet test Spendly.sln
 ```
 
-The current test projects are:
+The test projects are:
 
 ```text
 tests/Spendly.UnitTests
 tests/Spendly.IntegrationTests
 ```
 
-Integration tests use the ASP.NET Core test host through `WebApplicationFactory<Program>`.
+Unit tests verify domain behavior in isolation.
 
-They do not require PostgreSQL or any external database in v0.2.
+Integration tests start the API in memory through
+`WebApplicationFactory<Program>` and do not currently require PostgreSQL,
+Docker, or any external services.
 
-## Run API locally
+## Run the API locally
 
 From the `backend` directory:
 
@@ -156,19 +281,11 @@ From the `backend` directory:
 dotnet run --project src/Spendly.Api/Spendly.Api.csproj --launch-profile https
 ```
 
-The `https` launch profile starts the API with the `Development` environment.
-
-Local API URLs:
+Local URLs:
 
 ```text
 https://localhost:7037
 http://localhost:5294
-```
-
-The main local HTTPS URL is:
-
-```text
-https://localhost:7037
 ```
 
 Root status endpoint:
@@ -186,97 +303,57 @@ Example response:
 }
 ```
 
-## Scalar and OpenAPI
+## Current API surface
 
-The project uses Scalar as the API documentation UI.
+The API currently exposes backend foundation endpoints only:
 
-Scalar UI is available at:
+```text
+GET /
+GET /health/live
+GET /health/ready
+GET /openapi/{documentName}.json
+GET /docs
+```
+
+There are no wallet, category, transaction, budget, authentication, or
+reporting endpoints yet.
+
+The repository milestone version and the API document version are separate
+concepts. The API configuration currently keeps the document name `v0.2`
+because the v0.3 work adds a domain model without changing the HTTP contract.
+
+In the Development environment:
 
 ```text
 https://localhost:7037/docs
-```
-
-OpenAPI JSON is available at:
-
-```text
 https://localhost:7037/openapi/v0.2.json
 ```
 
-OpenAPI and Scalar are enabled only in the `Development` environment.
-
-In `appsettings.json`, OpenAPI is disabled by default:
-
-```json
-{
-  "OpenApi": {
-    "Enabled": false
-  }
-}
-```
-
-In `appsettings.Development.json`, OpenAPI is enabled for local development:
-
-```json
-{
-  "OpenApi": {
-    "Enabled": true
-  }
-}
-```
-
-The API also checks that the application is running in `Development` before mapping Scalar and OpenAPI endpoints.
+OpenAPI and Scalar are disabled outside Development unless the configuration
+and environment rules are changed intentionally.
 
 ## Health checks
 
-The API exposes two health check endpoints.
-
-### Liveness
+Liveness:
 
 ```text
 GET https://localhost:7037/health/live
 ```
 
-The liveness endpoint checks whether the API process is alive and able to respond to HTTP requests.
-
-In v0.2 this endpoint does not check the database or external services.
-
-### Readiness
+Readiness:
 
 ```text
 GET https://localhost:7037/health/ready
 ```
 
-The readiness endpoint checks whether the API is ready to serve traffic.
+The current health checks verify the application process only.
 
-In v0.2 readiness contains the internal `self` health check only.
-
-The current readiness check confirms that the application is running.
-
-Example response:
-
-```json
-{
-  "status": "Healthy",
-  "totalDuration": "00:00:00.0000000",
-  "entries": {
-    "self": {
-      "status": "Healthy",
-      "description": "Application is running.",
-      "duration": "00:00:00.0000000"
-    }
-  }
-}
-```
+They do not check PostgreSQL or other external dependencies because those
+dependencies are not connected yet.
 
 ## Error handling
 
-The API uses a centralized error response format based on ASP.NET Core ProblemDetails.
-
-Errors are returned as:
-
-```text
-application/problem+json
-```
+The API uses ASP.NET Core ProblemDetails as its standard HTTP error format.
 
 A typical error response contains:
 
@@ -292,79 +369,58 @@ A typical error response contains:
 }
 ```
 
-Field meaning:
+Unhandled exceptions are logged through Serilog and converted to safe
+`500 Internal Server Error` responses without exposing stack traces or internal
+implementation details to clients.
 
-```text
-type      - error type or documentation URL
-title     - short error title
-status    - HTTP status code
-detail    - human-readable error description
-instance  - request path where the error happened
-code      - Spendly internal error code
-traceId   - request trace identifier for logs and debugging
-```
+Domain errors are currently used inside the domain model. Mapping domain errors
+to HTTP responses will be introduced together with application use cases and
+domain API endpoints.
 
-Unhandled exceptions are converted to a safe `500 Internal Server Error` response.
+## Database status
 
-The client receives a generic error response without stack traces or internal implementation details.
+Entity Framework Core is not installed or configured in the current backend.
 
-Detailed exception information is written to application logs through Serilog.
+The project currently has:
 
-Validation errors use the same ProblemDetails format and include validation details.
+- no `DbContext`;
+- no entity configurations;
+- no repositories;
+- no migrations;
+- no connection string used by the API;
+- no database health check;
+- no database-backed integration tests.
 
-## Database and EF Core status
-
-PostgreSQL and Entity Framework Core are not part of the implemented API in v0.2.
-
-The repository contains a Docker Compose file for PostgreSQL:
+The Docker Compose file is preparation for a future persistence milestone:
 
 ```text
 deploy/docker-compose.yml
 ```
 
-This file is prepared for future backend stages.
-
-Current v0.2 behavior:
-
-- the API does not connect to PostgreSQL
-- there is no EF Core `DbContext`
-- there are no EF Core migrations
-- health checks do not check database connectivity
-- tests do not require a running database
-- local API startup does not require Docker
-
-Database integration will be added in a later backend milestone.
-
-## Optional PostgreSQL container
-
-PostgreSQL can be started from the repository root if needed for future work:
+Starting PostgreSQL is currently optional:
 
 ```bash
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
-For v0.2 backend development this step is optional and not required.
+See [deploy/README.md](deploy/README.md) before using it.
 
-## Useful backend commands
+## Continuous integration
 
-From the repository root:
-
-```bash
-cd backend
-dotnet restore Spendly.sln
-dotnet build Spendly.sln
-dotnet test Spendly.sln
-dotnet run --project src/Spendly.Api/Spendly.Api.csproj --launch-profile https
-```
-
-## CI
-
-Backend CI is configured through GitHub Actions.
-
-Workflow file:
+Backend CI is configured in:
 
 ```text
 .github/workflows/backend-ci.yml
 ```
 
-The CI pipeline restores, builds and tests the backend solution.
+The workflow:
+
+1. checks out the repository;
+2. installs the SDK from `global.json`;
+3. restores the solution;
+4. builds it in Release configuration;
+5. runs unit tests;
+6. runs integration tests.
+
+The workflow is triggered for backend-related pull requests and pushes to
+`main`.

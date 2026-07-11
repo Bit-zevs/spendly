@@ -1,8 +1,10 @@
 # Transactions
 
-Descriptions are optional. Empty or whitespace-only descriptions are stored as
-`null`, while meaningful descriptions are trimmed. Description length is checked
-after trimming and must not exceed `Transaction.MaxDescriptionLength` characters.
+This folder contains the transaction-related domain model.
+
+A transaction represents a supported money movement and protects the
+relationship between its type, amount, wallet, category, timestamps, and
+optional description.
 
 ## Current domain types
 
@@ -72,7 +74,7 @@ currently supported transactions require a category.
 `TransactionId` provides a strongly typed identifier backed by `Guid`.
 
 New identifiers are generated as version 7 UUIDs. Existing identifiers can be
-restored through `TransactionId.From`, while an empty identifier is rejected.
+restored through `TransactionId.From`, which rejects `Guid.Empty`.
 
 ## Not included yet
 
