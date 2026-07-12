@@ -11,7 +11,7 @@ public sealed class EfCoreDomainModelCompatibilityTests
 {
     private const string PostgreSqlImage = "postgres:17.10";
 
-    [Fact]
+    [Fact(Explicit = true)]
     [Trait("Dependency", "Docker")]
     public async Task DomainModel_ShouldRoundTripThroughPostgreSql()
     {
@@ -31,12 +31,18 @@ public sealed class EfCoreDomainModelCompatibilityTests
             .Options;
 
         var wallet = CreateWallet();
-        var category = CreateCategory();
+        var expenseCategory = CreateCategory(
+            "Groceries",
+            CategoryType.Expense);
+        var incomeCategory = CreateCategory(
+            "Salary",
+            CategoryType.Income);
 
-        var updatedTransaction = CreateTransaction(
+        var expense = CreateTransaction(
+            TransactionType.Expense,
             wallet,
-            category,
-            amount: 125.75m,
+            expenseCategory,
+            amount: 125.7500m,
             description: "  Groceries  ",
             occurredAt: new DateTimeOffset(
                 2026,
@@ -48,10 +54,11 @@ public sealed class EfCoreDomainModelCompatibilityTests
                 123,
                 TimeSpan.FromHours(3)));
 
-        var unchangedTransaction = CreateTransaction(
+        var income = CreateTransaction(
+            TransactionType.Income,
             wallet,
-            category,
-            amount: 20m,
+            incomeCategory,
+            amount: 75_000m,
             description: null,
             occurredAt: new DateTimeOffset(
                 2026,
@@ -63,32 +70,22 @@ public sealed class EfCoreDomainModelCompatibilityTests
                 456,
                 TimeSpan.FromHours(5)));
 
-        var expectedUpdatedAt = new DateTimeOffset(
-            2026,
-            7,
-            12,
-            8,
-            45,
-            10,
-            789,
-            TimeSpan.Zero);
-
         await SaveDomainObjectsAsync(
             options,
             wallet,
-            category,
-            updatedTransaction,
-            unchangedTransaction,
-            expectedUpdatedAt,
+            expenseCategory,
+            incomeCategory,
+            expense,
+            income,
             cancellationToken);
 
         await AssertMaterializedObjectsAsync(
             options,
             wallet,
-            category,
-            updatedTransaction,
-            unchangedTransaction,
-            expectedUpdatedAt,
+            expenseCategory,
+            incomeCategory,
+            expense,
+            income,
             cancellationToken);
     }
 
@@ -97,7 +94,7 @@ public sealed class EfCoreDomainModelCompatibilityTests
         return Wallet.Create(
             name: "  Main wallet  ",
             type: WalletType.DebitCard,
-            currency: Currency.Usd,
+            currency: Currency.From("kzt"),
             createdAt: new DateTimeOffset(
                 2026,
                 7,
@@ -109,11 +106,13 @@ public sealed class EfCoreDomainModelCompatibilityTests
                 TimeSpan.FromHours(5)));
     }
 
-    private static Category CreateCategory()
+    private static Category CreateCategory(
+        string name,
+        CategoryType type)
     {
         return Category.Create(
-            name: "  Groceries  ",
-            type: CategoryType.Expense,
+            name: $"  {name}  ",
+            type: type,
             createdAt: new DateTimeOffset(
                 2026,
                 7,
@@ -126,6 +125,7 @@ public sealed class EfCoreDomainModelCompatibilityTests
     }
 
     private static Transaction CreateTransaction(
+        TransactionType type,
         Wallet wallet,
         Category category,
         decimal amount,
@@ -133,9 +133,9 @@ public sealed class EfCoreDomainModelCompatibilityTests
         DateTimeOffset occurredAt)
     {
         return Transaction.Create(
-            type: TransactionType.Expense,
-            amount: Money.Positive(amount, Currency.Usd),
-            walletId: wallet.Id,
+            type: type,
+            amount: Money.Positive(amount, wallet.Currency),
+            wallet: wallet,
             category: category,
             occurredAt: occurredAt,
             description: description,
@@ -153,10 +153,10 @@ public sealed class EfCoreDomainModelCompatibilityTests
     private static async Task SaveDomainObjectsAsync(
         DbContextOptions<EfCoreCompatibilityDbContext> options,
         Wallet wallet,
-        Category category,
-        Transaction updatedTransaction,
-        Transaction unchangedTransaction,
-        DateTimeOffset expectedUpdatedAt,
+        Category expenseCategory,
+        Category incomeCategory,
+        Transaction expense,
+        Transaction income,
         CancellationToken cancellationToken)
     {
         await using var writeContext =
@@ -165,38 +165,23 @@ public sealed class EfCoreDomainModelCompatibilityTests
         await writeContext.Database.EnsureCreatedAsync(cancellationToken);
 
         writeContext.Wallets.Add(wallet);
-        writeContext.Categories.Add(category);
-
-        await writeContext.SaveChangesAsync(cancellationToken);
-
+        writeContext.Categories.AddRange(
+            expenseCategory,
+            incomeCategory);
         writeContext.Transactions.AddRange(
-            updatedTransaction,
-            unchangedTransaction);
+            expense,
+            income);
 
         await writeContext.SaveChangesAsync(cancellationToken);
-
-        FormattableString updateSql =
-            $"""
-             UPDATE transactions
-             SET updated_at = {expectedUpdatedAt}
-             WHERE id = {updatedTransaction.Id.Value};
-             """;
-
-        var affectedRows =
-            await writeContext.Database.ExecuteSqlInterpolatedAsync(
-                updateSql,
-                cancellationToken);
-
-        Assert.Equal(1, affectedRows);
     }
 
     private static async Task AssertMaterializedObjectsAsync(
         DbContextOptions<EfCoreCompatibilityDbContext> options,
         Wallet expectedWallet,
-        Category expectedCategory,
-        Transaction expectedUpdatedTransaction,
-        Transaction expectedUnchangedTransaction,
-        DateTimeOffset expectedUpdatedAt,
+        Category expectedExpenseCategory,
+        Category expectedIncomeCategory,
+        Transaction expectedExpense,
+        Transaction expectedIncome,
         CancellationToken cancellationToken)
     {
         await using var readContext =
@@ -208,46 +193,27 @@ public sealed class EfCoreDomainModelCompatibilityTests
                 wallet => wallet.Id == expectedWallet.Id,
                 cancellationToken);
 
-        var actualCategory = await readContext.Categories
+        var actualCategories = await readContext.Categories
             .AsNoTracking()
-            .SingleAsync(
-                category => category.Id == expectedCategory.Id,
-                cancellationToken);
+            .OrderBy(category => category.Name)
+            .ToArrayAsync(cancellationToken);
 
-        var actualUpdatedTransaction = await readContext.Transactions
+        var actualTransactions = await readContext.Transactions
             .AsNoTracking()
-            .SingleAsync(
-                transaction =>
-                    transaction.Id == expectedUpdatedTransaction.Id,
-                cancellationToken);
-
-        var actualUnchangedTransaction = await readContext.Transactions
-            .AsNoTracking()
-            .SingleAsync(
-                transaction =>
-                    transaction.Id == expectedUnchangedTransaction.Id,
-                cancellationToken);
+            .OrderBy(transaction => transaction.Type)
+            .ToArrayAsync(cancellationToken);
 
         AssertWallet(expectedWallet, actualWallet);
-        AssertCategory(expectedCategory, actualCategory);
 
-        AssertTransaction(
-            expectedUpdatedTransaction,
-            actualUpdatedTransaction);
+        Assert.Collection(
+            actualCategories,
+            category => AssertCategory(expectedExpenseCategory, category),
+            category => AssertCategory(expectedIncomeCategory, category));
 
-        Assert.Equal(
-            expectedUpdatedAt,
-            actualUpdatedTransaction.UpdatedAt);
-
-        Assert.Equal(
-            TimeSpan.Zero,
-            actualUpdatedTransaction.UpdatedAt!.Value.Offset);
-
-        AssertTransaction(
-            expectedUnchangedTransaction,
-            actualUnchangedTransaction);
-
-        Assert.Null(actualUnchangedTransaction.UpdatedAt);
+        Assert.Collection(
+            actualTransactions,
+            transaction => AssertTransaction(expectedIncome, transaction),
+            transaction => AssertTransaction(expectedExpense, transaction));
 
         Assert.Empty(readContext.ChangeTracker.Entries());
     }
@@ -261,7 +227,7 @@ public sealed class EfCoreDomainModelCompatibilityTests
         Assert.Equal(expected.Name, actual.Name);
         Assert.Equal(expected.Type, actual.Type);
         Assert.Equal(expected.Currency, actual.Currency);
-        Assert.Same(Currency.Usd, actual.Currency);
+        Assert.Equal("KZT", actual.Currency.Code);
         Assert.Equal(expected.CreatedAt, actual.CreatedAt);
         Assert.Equal(TimeSpan.Zero, actual.CreatedAt.Offset);
     }
@@ -286,7 +252,7 @@ public sealed class EfCoreDomainModelCompatibilityTests
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Type, actual.Type);
         Assert.Equal(expected.Amount, actual.Amount);
-        Assert.Same(Currency.Usd, actual.Amount.Currency);
+        Assert.Equal("KZT", actual.Amount.Currency.Code);
         Assert.Equal(expected.WalletId, actual.WalletId);
         Assert.Equal(expected.CategoryId, actual.CategoryId);
         Assert.Equal(expected.OccurredAt, actual.OccurredAt);

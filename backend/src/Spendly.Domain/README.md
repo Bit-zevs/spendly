@@ -139,6 +139,9 @@ It validates the format, normalizes the code, and provides value equality.
 It protects monetary invariants and provides:
 
 - zero and positive creation methods;
+- a persistence-aligned `decimal(19, 4)` policy;
+- a maximum amount of `999999999999999.9999`;
+- rejection of values with more than four fractional digits;
 - same-currency addition and subtraction;
 - same-currency comparison;
 - value equality;
@@ -157,7 +160,7 @@ The wallet domain area contains:
 A wallet currently has:
 
 - a generated identifier;
-- a required normalized name;
+- a required normalized name limited to `Wallet.MaxNameLength`;
 - a supported wallet type;
 - a required currency;
 - a UTC creation timestamp.
@@ -176,7 +179,7 @@ The category domain area contains:
 A category currently has:
 
 - a generated identifier;
-- a required normalized name;
+- a required normalized name limited to `Category.MaxNameLength`;
 - either the `Income` or `Expense` type;
 - a UTC creation timestamp.
 
@@ -200,7 +203,7 @@ A transaction requires:
 
 - a supported transaction type;
 - a positive monetary amount;
-- a wallet identifier;
+- a wallet whose currency matches the amount currency;
 - a category matching the transaction direction;
 - an occurrence timestamp;
 - a creation timestamp.

@@ -34,8 +34,7 @@ public sealed class CategoryTests
         CategoryType.Expense
     };
 
-    public static TheoryData<DateTimeOffset, DateTimeOffset> CreatedAtUtcCases
-        { get; } = new()
+    public static TheoryData<DateTimeOffset, DateTimeOffset> CreatedAtUtcCases { get; } = new()
     {
         {
             new DateTimeOffset(

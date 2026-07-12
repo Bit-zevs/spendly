@@ -37,7 +37,7 @@ public sealed class GlobalExceptionHandler(
 
         var problemDetails = new ProblemDetails
         {
-            Type = ProblemDetailsDefaults.GetType(statusCode),
+            Type = ProblemDetailsDefaults.GetTypeUri(),
             Title = ProblemDetailsDefaults.GetTitle(statusCode),
             Status = statusCode,
             Detail = ProblemDetailsDefaults.GetDetail(statusCode)

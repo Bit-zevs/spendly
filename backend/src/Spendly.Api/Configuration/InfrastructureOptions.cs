@@ -8,6 +8,10 @@ public sealed class InfrastructureOptions
 
     public sealed class DatabaseOptions
     {
-        public string Provider { get; init; } = "NotConfigured";
+        public const string NotConfiguredProvider = "NotConfigured";
+
+        public const string PostgreSqlProvider = "PostgreSQL";
+
+        public string Provider { get; init; } = NotConfiguredProvider;
     }
 }

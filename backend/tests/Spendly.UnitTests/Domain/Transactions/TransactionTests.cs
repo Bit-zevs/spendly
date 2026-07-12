@@ -15,8 +15,18 @@ public sealed class TransactionTests
         1_250.50m,
         Currency.Rub);
 
-    private static readonly WalletId ValidWalletId = WalletId.From(
-        Guid.Parse("0190d4b8-5c2e-7b1f-8f65-3df4a6c90872"));
+    private static readonly Wallet ValidWallet = Wallet.Create(
+        "Main wallet",
+        WalletType.DebitCard,
+        Currency.Rub,
+        new DateTimeOffset(
+            2026,
+            7,
+            11,
+            12,
+            0,
+            0,
+            TimeSpan.Zero));
 
     private static readonly DateTimeOffset ValidOccurredAt = new(
         2026,
@@ -36,8 +46,7 @@ public sealed class TransactionTests
         0,
         TimeSpan.Zero);
 
-    public static TheoryData<string?, string?>
-        DescriptionNormalizationCases { get; } = new()
+    public static TheoryData<string?, string?> DescriptionNormalizationCases { get; } = new()
     {
         { null, null },
         { string.Empty, null },
@@ -51,8 +60,7 @@ public sealed class TransactionTests
         { $"\u2003{ValidDescription}\u2003", ValidDescription }
     };
 
-    public static TheoryData<TransactionType>
-        InvalidTransactionTypes { get; } = new()
+    public static TheoryData<TransactionType> InvalidTransactionTypes { get; } = new()
     {
         (TransactionType)int.MinValue,
         (TransactionType)(-1),
@@ -62,8 +70,7 @@ public sealed class TransactionTests
         (TransactionType)int.MaxValue
     };
 
-    public static TheoryData<TransactionType, CategoryType>
-        MismatchedCategoryTypes { get; } = new()
+    public static TheoryData<TransactionType, CategoryType> MismatchedCategoryTypes { get; } = new()
     {
         {
             TransactionType.Income,
@@ -75,8 +82,7 @@ public sealed class TransactionTests
         }
     };
 
-    public static TheoryData<DateTimeOffset, DateTimeOffset>
-        DateNormalizationCases { get; } = new()
+    public static TheoryData<DateTimeOffset, DateTimeOffset> DateNormalizationCases { get; } = new()
     {
         {
             new DateTimeOffset(
@@ -160,7 +166,7 @@ public sealed class TransactionTests
         var transaction = Transaction.Create(
             TransactionType.Expense,
             ValidAmount,
-            ValidWalletId,
+            ValidWallet,
             category,
             ValidOccurredAt,
             ValidDescription,
@@ -170,7 +176,7 @@ public sealed class TransactionTests
             transaction,
             TransactionType.Expense,
             ValidAmount,
-            ValidWalletId,
+            ValidWallet,
             category.Id,
             ValidOccurredAt,
             ValidDescription,
@@ -191,7 +197,7 @@ public sealed class TransactionTests
         var transaction = Transaction.Create(
             TransactionType.Income,
             amount,
-            ValidWalletId,
+            ValidWallet,
             category,
             ValidOccurredAt,
             description,
@@ -201,7 +207,7 @@ public sealed class TransactionTests
             transaction,
             TransactionType.Income,
             amount,
-            ValidWalletId,
+            ValidWallet,
             category.Id,
             ValidOccurredAt,
             description,
@@ -216,7 +222,7 @@ public sealed class TransactionTests
         var firstTransaction = Transaction.Create(
             TransactionType.Expense,
             ValidAmount,
-            ValidWalletId,
+            ValidWallet,
             category,
             ValidOccurredAt,
             ValidDescription,
@@ -225,7 +231,7 @@ public sealed class TransactionTests
         var secondTransaction = Transaction.Create(
             TransactionType.Expense,
             ValidAmount,
-            ValidWalletId,
+            ValidWallet,
             category,
             ValidOccurredAt,
             ValidDescription,
@@ -345,7 +351,7 @@ public sealed class TransactionTests
             () => Transaction.Create(
                 type,
                 ValidAmount,
-                ValidWalletId,
+                ValidWallet,
                 CreateCategory(CategoryType.Expense),
                 ValidOccurredAt,
                 ValidDescription,
@@ -360,7 +366,7 @@ public sealed class TransactionTests
             () => Transaction.Create(
                 TransactionType.Transfer,
                 ValidAmount,
-                ValidWalletId,
+                ValidWallet,
                 CreateCategory(CategoryType.Expense),
                 ValidOccurredAt,
                 ValidDescription,
@@ -375,7 +381,7 @@ public sealed class TransactionTests
             () => Transaction.Create(
                 TransactionType.Expense,
                 null,
-                ValidWalletId,
+                ValidWallet,
                 CreateCategory(CategoryType.Expense),
                 ValidOccurredAt,
                 ValidDescription,
@@ -392,7 +398,7 @@ public sealed class TransactionTests
             () => Transaction.Create(
                 TransactionType.Expense,
                 zeroAmount,
-                ValidWalletId,
+                ValidWallet,
                 CreateCategory(CategoryType.Expense),
                 ValidOccurredAt,
                 ValidDescription,
@@ -400,14 +406,31 @@ public sealed class TransactionTests
     }
 
     [Fact]
-    public void Create_ShouldThrowDomainException_WhenWalletIdIsDefault()
+    public void Create_ShouldThrowDomainException_WhenWalletIsNull()
     {
         DomainExceptionAssert.Throws(
             DomainErrors.Transaction.WalletIsRequired,
             () => Transaction.Create(
                 TransactionType.Expense,
                 ValidAmount,
-                default,
+                null,
+                CreateCategory(CategoryType.Expense),
+                ValidOccurredAt,
+                ValidDescription,
+                ValidCreatedAt));
+    }
+
+    [Fact]
+    public void Create_ShouldThrowDomainException_WhenAmountCurrencyDoesNotMatchWalletCurrency()
+    {
+        var usdAmount = Money.Positive(100m, Currency.Usd);
+
+        DomainExceptionAssert.Throws(
+            DomainErrors.Transaction.AmountCurrencyMismatch,
+            () => Transaction.Create(
+                TransactionType.Expense,
+                usdAmount,
+                ValidWallet,
                 CreateCategory(CategoryType.Expense),
                 ValidOccurredAt,
                 ValidDescription,
@@ -425,7 +448,7 @@ public sealed class TransactionTests
             () => Transaction.Create(
                 type,
                 ValidAmount,
-                ValidWalletId,
+                ValidWallet,
                 null,
                 ValidOccurredAt,
                 ValidDescription,
@@ -445,7 +468,7 @@ public sealed class TransactionTests
             () => Transaction.Create(
                 transactionType,
                 ValidAmount,
-                ValidWalletId,
+                ValidWallet,
                 category,
                 ValidOccurredAt,
                 ValidDescription,
@@ -460,7 +483,7 @@ public sealed class TransactionTests
             () => Transaction.Create(
                 TransactionType.Expense,
                 ValidAmount,
-                ValidWalletId,
+                ValidWallet,
                 CreateCategory(CategoryType.Expense),
                 default,
                 ValidDescription,
@@ -475,7 +498,7 @@ public sealed class TransactionTests
             () => Transaction.Create(
                 TransactionType.Expense,
                 ValidAmount,
-                ValidWalletId,
+                ValidWallet,
                 CreateCategory(CategoryType.Expense),
                 ValidOccurredAt,
                 ValidDescription,
@@ -490,7 +513,7 @@ public sealed class TransactionTests
         return Transaction.Create(
             TransactionType.Expense,
             ValidAmount,
-            ValidWalletId,
+            ValidWallet,
             CreateCategory(CategoryType.Expense),
             occurredAt ?? ValidOccurredAt,
             description,
@@ -519,7 +542,7 @@ public sealed class TransactionTests
         Transaction transaction,
         TransactionType expectedType,
         Money expectedAmount,
-        WalletId expectedWalletId,
+        Wallet expectedWallet,
         CategoryId expectedCategoryId,
         DateTimeOffset expectedOccurredAt,
         string? expectedDescription,
@@ -554,7 +577,7 @@ public sealed class TransactionTests
             transaction.Amount.Currency);
 
         Assert.Equal(
-            expectedWalletId,
+            expectedWallet.Id,
             transaction.WalletId);
 
         Assert.Equal(
@@ -580,7 +603,5 @@ public sealed class TransactionTests
         Assert.Equal(
             TimeSpan.Zero,
             transaction.CreatedAt.Offset);
-
-        Assert.Null(transaction.UpdatedAt);
     }
 }

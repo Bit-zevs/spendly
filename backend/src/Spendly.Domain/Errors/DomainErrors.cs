@@ -26,6 +26,14 @@ public static class DomainErrors
             "Money.Amount.NotPositive",
             "Money amount must be greater than zero.");
 
+        public static readonly DomainError AmountExceedsMaximum = new(
+            "Money.Amount.ExceedsMaximum",
+            "Money amount exceeds the maximum supported value.");
+
+        public static readonly DomainError AmountHasTooManyFractionalDigits = new(
+            "Money.Amount.TooManyFractionalDigits",
+            "Money amount has more fractional digits than supported.");
+
         public static readonly DomainError CurrencyIsRequired = new(
             "Money.Currency.Required",
             "Money currency is required.");
@@ -40,6 +48,10 @@ public static class DomainErrors
         public static readonly DomainError NameIsEmpty = new(
             "Wallet.Name.Empty",
             "Wallet name cannot be empty.");
+
+        public static readonly DomainError NameIsTooLong = new(
+            "Wallet.Name.TooLong",
+            "Wallet name exceeds the maximum allowed length.");
 
         public static readonly DomainError TypeIsInvalid = new(
             "Wallet.Type.Invalid",
@@ -59,6 +71,10 @@ public static class DomainErrors
         public static readonly DomainError NameIsEmpty = new(
             "Category.Name.Empty",
             "Category name cannot be empty.");
+
+        public static readonly DomainError NameIsTooLong = new(
+            "Category.Name.TooLong",
+            "Category name exceeds the maximum allowed length.");
 
         public static readonly DomainError TypeIsInvalid = new(
             "Category.Type.Invalid",
@@ -86,6 +102,10 @@ public static class DomainErrors
         public static readonly DomainError AmountMustBePositive = new(
             "Transaction.Amount.NotPositive",
             "Transaction amount must be greater than zero.");
+
+        public static readonly DomainError AmountCurrencyMismatch = new(
+            "Transaction.Amount.CurrencyMismatch",
+            "Transaction amount currency must match the wallet currency.");
 
         public static readonly DomainError WalletIsRequired = new(
             "Transaction.Wallet.Required",

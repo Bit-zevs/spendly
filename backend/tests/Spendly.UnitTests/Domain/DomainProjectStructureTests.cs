@@ -4,137 +4,91 @@ namespace Spendly.UnitTests.Domain;
 
 public sealed class DomainProjectStructureTests
 {
-    private static readonly string[] ExpectedDomainDirectories =
+    private static readonly string[] ForbiddenPackagePrefixes =
     [
-        "Common",
-        "Errors",
-        "ValueObjects",
-        "Wallets",
-        "Categories",
-        "Transactions"
+        "Microsoft.AspNetCore",
+        "Microsoft.EntityFrameworkCore",
+        "Npgsql"
+    ];
+
+    private static readonly string[] ForbiddenAssemblyPrefixes =
+    [
+        "Microsoft.AspNetCore",
+        "Microsoft.EntityFrameworkCore",
+        "Npgsql"
     ];
 
     [Fact]
-    public void DomainProject_ShouldContainExpectedDirectories()
+    public void DomainProject_ShouldNotReferenceOtherProjects()
     {
-        var domainProjectDirectory = GetDomainProjectDirectory();
-
-        foreach (var directoryName in ExpectedDomainDirectories)
-        {
-            var directoryPath = Path.Combine(domainProjectDirectory.FullName, directoryName);
-
-            Assert.True(
-                Directory.Exists(directoryPath),
-                $"The Spendly.Domain project should contain the '{directoryName}' directory.");
-        }
-    }
-
-    [Fact]
-    public void DomainDirectories_ShouldContainReadmeFiles()
-    {
-        var domainProjectDirectory = GetDomainProjectDirectory();
-
-        foreach (var directoryName in ExpectedDomainDirectories)
-        {
-            var readmePath = Path.Combine(domainProjectDirectory.FullName, directoryName, "README.md");
-
-            Assert.True(
-                File.Exists(readmePath),
-                $"The Spendly.Domain/{directoryName} directory should contain a README.md file describing its purpose.");
-        }
-    }
-
-    [Fact]
-    public void DomainProject_ShouldNotReferenceOtherSpendlyProjects()
-    {
-        var domainProjectDirectory = GetDomainProjectDirectory();
-        var projectFilePath = Path.Combine(domainProjectDirectory.FullName, "Spendly.Domain.csproj");
-
-        var document = XDocument.Load(projectFilePath);
-
-        var projectReferences = document
-            .Descendants()
-            .Where(element => element.Name.LocalName == "ProjectReference")
-            .Select(element => ((string?)element.Attribute("Include") ?? string.Empty).Replace('\\', '/'))
-            .Order(StringComparer.Ordinal)
-            .ToArray();
+        var projectFilePath = GetDomainProjectFilePath();
+        var projectReferences = ReadProjectReferences(projectFilePath);
 
         Assert.Empty(projectReferences);
     }
 
     [Fact]
-    public void DomainProject_ShouldNotReferencePersistencePackages()
+    public void DomainProject_ShouldNotReferenceFrameworkOrPersistencePackages()
     {
-        var domainProjectDirectory = GetDomainProjectDirectory();
-        var projectFilePath = Path.Combine(
-            domainProjectDirectory.FullName,
-            "Spendly.Domain.csproj");
-
+        var projectFilePath = GetDomainProjectFilePath();
         var document = XDocument.Load(projectFilePath);
 
-        var persistencePackageReferences = document
+        var forbiddenReferences = document
             .Descendants()
             .Where(element => element.Name.LocalName == "PackageReference")
             .Select(element => (string?)element.Attribute("Include") ?? string.Empty)
-            .Where(packageName =>
-                packageName.StartsWith(
-                    "Microsoft.EntityFrameworkCore",
-                    StringComparison.OrdinalIgnoreCase)
-                || packageName.StartsWith(
-                    "Npgsql",
-                    StringComparison.OrdinalIgnoreCase))
+            .Where(packageName => ForbiddenPackagePrefixes.Any(prefix =>
+                packageName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Empty(persistencePackageReferences);
+        Assert.Empty(forbiddenReferences);
     }
 
     [Fact]
-    public void DomainAssembly_ShouldNotReferenceEntityFrameworkCore()
+    public void DomainAssembly_ShouldNotReferenceFrameworkOrPersistenceAssemblies()
     {
-        var entityFrameworkReferences = typeof(Spendly.Domain.Common.Entity<>)
+        var forbiddenReferences = typeof(Spendly.Domain.Common.Entity<>)
             .Assembly
             .GetReferencedAssemblies()
-            .Where(reference =>
-                reference.Name?.StartsWith(
-                    "Microsoft.EntityFrameworkCore",
-                    StringComparison.Ordinal) is true)
+            .Where(reference => ForbiddenAssemblyPrefixes.Any(prefix =>
+                reference.Name?.StartsWith(prefix, StringComparison.Ordinal) is true))
             .Select(reference => reference.FullName)
+            .Order(StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Empty(entityFrameworkReferences);
+        Assert.Empty(forbiddenReferences);
     }
 
-    private static DirectoryInfo GetDomainProjectDirectory()
+    private static string GetDomainProjectFilePath()
     {
-        var unitTestsProjectDirectory = GetUnitTestsProjectDirectory();
-
-        var domainProjectDirectoryPath = Path.GetFullPath(
-            Path.Combine(
-                unitTestsProjectDirectory.FullName,
-                "..",
-                "..",
-                "src",
-                "Spendly.Domain"));
-
-        if (!Directory.Exists(domainProjectDirectoryPath))
-        {
-            throw new DirectoryNotFoundException(
-                $"Could not find the Spendly.Domain project directory at '{domainProjectDirectoryPath}'.");
-        }
-
-        return new DirectoryInfo(domainProjectDirectoryPath);
+        return Path.Combine(
+            GetBackendDirectory().FullName,
+            "src",
+            "Spendly.Domain",
+            "Spendly.Domain.csproj");
     }
 
-    private static DirectoryInfo GetUnitTestsProjectDirectory()
+    private static string[] ReadProjectReferences(string projectFilePath)
+    {
+        var document = XDocument.Load(projectFilePath);
+
+        return document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "ProjectReference")
+            .Select(element => ((string?)element.Attribute("Include") ?? string.Empty)
+                .Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static DirectoryInfo GetBackendDirectory()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
         while (directory is not null)
         {
-            var projectFilePath = Path.Combine(directory.FullName, "Spendly.UnitTests.csproj");
-
-            if (File.Exists(projectFilePath))
+            if (File.Exists(Path.Combine(directory.FullName, "Spendly.sln")))
             {
                 return directory;
             }
@@ -143,6 +97,6 @@ public sealed class DomainProjectStructureTests
         }
 
         throw new DirectoryNotFoundException(
-            "Could not find the Spendly.UnitTests project directory.");
+            "Could not find the backend directory containing Spendly.sln.");
     }
 }

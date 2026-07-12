@@ -12,8 +12,6 @@ public sealed class Transaction : Entity<TransactionId>
 
     private Money _amount = null!;
 
-    private DateTimeOffset? _updatedAt;
-
     /// <summary>
     /// Initializes a transaction for persistence materialization.
     /// </summary>
@@ -58,7 +56,6 @@ public sealed class Transaction : Entity<TransactionId>
             createdAt)
     {
         _amount = amount;
-        _updatedAt = null;
     }
 
     public TransactionType Type { get; }
@@ -75,12 +72,10 @@ public sealed class Transaction : Entity<TransactionId>
 
     public DateTimeOffset CreatedAt { get; }
 
-    public DateTimeOffset? UpdatedAt => _updatedAt;
-
     public static Transaction Create(
         TransactionType type,
         Money? amount,
-        WalletId walletId,
+        Wallet? wallet,
         Category? category,
         DateTimeOffset occurredAt,
         string? description,
@@ -90,13 +85,8 @@ public sealed class Transaction : Entity<TransactionId>
         EnsureTypeIsSupported(type);
 
         var requiredAmount = EnsureAmountIsValid(amount);
-
-        EnsureWalletIsProvided(walletId);
-
-        var requiredCategory = EnsureCategoryIsValid(
-            type,
-            category);
-
+        var requiredWallet = EnsureWalletIsValid(wallet, requiredAmount);
+        var requiredCategory = EnsureCategoryIsValid(type, category);
         var utcOccurredAt = NormalizeOccurredAt(occurredAt);
         var normalizedDescription = NormalizeDescription(description);
         var utcCreatedAt = NormalizeCreatedAt(createdAt);
@@ -105,7 +95,7 @@ public sealed class Transaction : Entity<TransactionId>
             TransactionId.New(),
             type,
             requiredAmount,
-            walletId,
+            requiredWallet.Id,
             requiredCategory.Id,
             utcOccurredAt,
             normalizedDescription,
@@ -147,13 +137,23 @@ public sealed class Transaction : Entity<TransactionId>
         return amount;
     }
 
-    private static void EnsureWalletIsProvided(WalletId walletId)
+    private static Wallet EnsureWalletIsValid(
+        Wallet? wallet,
+        Money amount)
     {
-        if (walletId == default)
+        if (wallet is null)
         {
             throw new DomainException(
                 DomainErrors.Transaction.WalletIsRequired);
         }
+
+        if (wallet.Currency != amount.Currency)
+        {
+            throw new DomainException(
+                DomainErrors.Transaction.AmountCurrencyMismatch);
+        }
+
+        return wallet;
     }
 
     private static Category EnsureCategoryIsValid(

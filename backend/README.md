@@ -187,7 +187,8 @@ provide technical implementations.
 - nullable reference types;
 - implicit global usings;
 - latest available analysis level;
-- code style enforcement during build.
+- code style enforcement during build;
+- warnings as errors for continuous-integration builds.
 
 `Directory.Packages.props` enables Central Package Management and stores package
 versions in one place.
@@ -210,10 +211,17 @@ Build:
 dotnet build Spendly.sln
 ```
 
-Test:
+Run all non-explicit tests without Docker:
 
 ```bash
 dotnet test Spendly.sln
+```
+
+Run integration tests including the explicit PostgreSQL Testcontainers test:
+
+```bash
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
+  --settings tests/docker.runsettings
 ```
 
 Run API:
@@ -237,6 +245,7 @@ that documents the intended configuration shape. It does not create a database
 connection.
 
 The PostgreSQL Docker Compose file is optional preparation for a future
-milestone and is not required to build or run the current API. A
-Docker-compatible container engine is required only when running the
-database-backed EF Core compatibility test.
+milestone and is not required to build or run the current API. The
+PostgreSQL compatibility test is explicit, so normal test execution does not
+require Docker. A Docker-compatible container engine is required only when the
+explicit test is enabled through `tests/docker.runsettings`.

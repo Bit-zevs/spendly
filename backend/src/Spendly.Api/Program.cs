@@ -1,4 +1,4 @@
-﻿using Serilog;
+using Serilog;
 using Spendly.Api.Extensions;
 using Spendly.Api.Logging;
 
@@ -41,7 +41,18 @@ static bool IsTestHostAbortException(Exception exception)
          currentException is not null;
          currentException = currentException.InnerException)
     {
-        if (currentException.GetType().Name is "HostAbortedException" or "StopTheHostException")
+        var exceptionType = currentException.GetType();
+
+        if (exceptionType.Name == "HostAbortedException"
+            && exceptionType.Namespace == "Microsoft.Extensions.Hosting")
+        {
+            return true;
+        }
+
+        if (exceptionType.Name == "StopTheHostException"
+            && exceptionType.Namespace?.StartsWith(
+                "Microsoft.Extensions.Hosting",
+                StringComparison.Ordinal) is true)
         {
             return true;
         }

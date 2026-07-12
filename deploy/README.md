@@ -1,39 +1,26 @@
 # Local Infrastructure
 
-This directory contains local infrastructure definitions prepared for Spendly
+This directory contains local infrastructure definitions for Spendly
 development.
 
-## Current contents
+## Files
 
 ```text
 deploy/
+├── .env.example
 ├── docker-compose.yml
 └── README.md
 ```
 
-The current Docker Compose configuration defines a local PostgreSQL service.
-
 ## PostgreSQL service
 
-Compose service name:
+The Compose service is named `spendly-postgres` and uses the pinned image:
 
 ```text
-spendly-postgres
+postgres:17.10
 ```
 
-Container name:
-
-```text
-spendly-postgres
-```
-
-Current image:
-
-```text
-postgres:17
-```
-
-Default local configuration:
+Default local values:
 
 ```text
 Database: spendly
@@ -43,163 +30,105 @@ Host port: 5432
 Container port: 5432
 ```
 
-The password is intended only for local development.
+The container name is not fixed, so multiple Compose projects can coexist
+without a global Docker name collision.
 
-It must not be reused in production, staging, shared testing environments, or
-publicly accessible database instances.
+The service includes a `pg_isready` health check.
 
-## Requirements
+## Optional environment file
 
-To use the Compose configuration, install a recent version of Docker Desktop or
-Docker Engine with the Docker Compose plugin.
+Copy the example file when local overrides are needed:
 
-Docker is currently optional for Spendly development because the backend does
-not connect to PostgreSQL yet.
+```bash
+cp deploy/.env.example deploy/.env
+```
+
+Available variables:
+
+```text
+SPENDLY_POSTGRES_DB
+SPENDLY_POSTGRES_USER
+SPENDLY_POSTGRES_PASSWORD
+SPENDLY_POSTGRES_PORT
+```
+
+The defaults and `.env.example` values are for isolated local development only.
+They must not be reused in production, staging, shared testing environments, or
+publicly reachable database instances.
 
 ## Start PostgreSQL
 
 Run from the repository root:
 
 ```bash
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
+```
+
+When `deploy/.env` was not created, omit `--env-file`; Compose will use the
+default values declared in `docker-compose.yml`:
+
+```bash
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
-The `-d` option starts the container in the background.
-
-## Check container state
+## Check health and state
 
 ```bash
 docker compose -f deploy/docker-compose.yml ps
 ```
 
-## View PostgreSQL logs
+The service should eventually report a healthy state.
+
+## View logs
 
 ```bash
 docker compose -f deploy/docker-compose.yml logs -f spendly-postgres
 ```
 
-Press `Ctrl+C` to stop following the logs. The container itself will continue
-running in the background.
+Press `Ctrl+C` to stop following logs. The container continues running.
 
-## Stop the container
+## Stop PostgreSQL
+
+Stop without deleting the service or volume:
 
 ```bash
 docker compose -f deploy/docker-compose.yml stop
 ```
 
-This stops the service without deleting the container or database volume.
-
-## Stop and remove the container
+Stop and remove the Compose container and network while preserving data:
 
 ```bash
 docker compose -f deploy/docker-compose.yml down
 ```
 
-This removes the Compose container and network but preserves the named database
-volume.
-
-## Remove the database volume
+Permanently remove the database volume:
 
 ```bash
 docker compose -f deploy/docker-compose.yml down --volumes
 ```
 
-This command permanently deletes all data stored in the local PostgreSQL
-volume.
-
-Use it only when the local database can be safely recreated.
-
-## Current volume
-
-PostgreSQL data is stored in the named Docker volume:
-
-```text
-spendly_postgres_data
-```
-
-It is mounted inside the container at:
-
-```text
-/var/lib/postgresql/data
-```
-
-This allows local data to survive ordinary container recreation.
+The named volume is `spendly_postgres_data` and is mounted at
+`/var/lib/postgresql/data`.
 
 ## Current backend integration status
 
-PostgreSQL is not connected to the current Spendly backend.
+PostgreSQL is not connected to the production API or Infrastructure project.
+The solution still has no production `DbContext`, migrations, repositories,
+connection string, or database readiness health check.
 
-The solution currently has:
+A test-only EF Core compatibility context uses PostgreSQL Testcontainers to
+verify the immutable Domain model. That test is explicit and does not run in a
+normal `dotnet test Spendly.sln` invocation.
 
-- no Entity Framework Core packages;
-- no `DbContext`;
-- no entity configurations;
-- no migrations;
-- no repository implementations;
-- no active database connection string;
-- no PostgreSQL health check;
-- no database-backed integration tests;
-- no Testcontainers setup.
+Run it from the `backend` directory with Docker available:
 
-The following API configuration value is currently only a placeholder:
-
-```text
-Infrastructure:Database:Provider
+```bash
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
+  --settings tests/docker.runsettings
 ```
-
-Its current value is:
-
-```text
-NotConfigured
-```
-
-It documents the expected configuration structure but does not create a
-database connection.
-
-## When Docker is not required
-
-Starting PostgreSQL is currently not required to:
-
-- restore backend packages;
-- build the solution;
-- run unit tests;
-- run integration tests;
-- start the API;
-- start the Worker;
-- use OpenAPI or Scalar;
-- call the current health check endpoints.
-
-The current integration tests host the API in memory and do not use external
-services.
-
-## Future persistence milestone
-
-When persistence is implemented, the Infrastructure project is expected to
-receive:
-
-- Entity Framework Core packages;
-- the PostgreSQL EF Core provider;
-- a `DbContext`;
-- entity type configurations;
-- repository implementations;
-- database migrations;
-- validated connection settings;
-- database readiness checks;
-- database-backed integration tests.
-
-The Domain project must remain independent from those implementation details.
 
 ## Secrets and production environments
 
-Production credentials must not be committed to the repository.
-
-Future environment-specific secrets should be supplied through an appropriate
-mechanism such as:
-
-- development user secrets;
-- environment variables;
-- CI/CD secret storage;
-- a production secret manager.
-
-The values in `docker-compose.yml` are suitable only for isolated local
-development.
+Production credentials must not be committed to the repository. Future
+credentials should be supplied through development user secrets, environment
+variables, CI/CD secret storage, or a production secret manager.

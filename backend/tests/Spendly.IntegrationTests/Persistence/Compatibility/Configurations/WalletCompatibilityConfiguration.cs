@@ -26,7 +26,7 @@ internal sealed class WalletCompatibilityConfiguration
         builder
             .Property(wallet => wallet.Name)
             .HasColumnName("name")
-            .HasColumnType("text")
+            .HasMaxLength(Wallet.MaxNameLength)
             .IsRequired();
 
         builder

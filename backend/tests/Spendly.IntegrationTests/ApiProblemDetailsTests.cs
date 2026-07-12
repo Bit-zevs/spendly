@@ -26,7 +26,7 @@ public sealed class ApiProblemDetailsTests(SpendlyApiFactory factory)
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
 
-        Assert.Equal("https://httpstatuses.com/404", root.GetProperty("type").GetString());
+        Assert.Equal("about:blank", root.GetProperty("type").GetString());
         Assert.Equal("Not Found", root.GetProperty("title").GetString());
         Assert.Equal(404, root.GetProperty("status").GetInt32());
         Assert.Equal("The requested resource was not found.", root.GetProperty("detail").GetString());
@@ -68,7 +68,7 @@ public sealed class ApiProblemDetailsTests(SpendlyApiFactory factory)
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
 
-        Assert.Equal("https://httpstatuses.com/500", root.GetProperty("type").GetString());
+        Assert.Equal("about:blank", root.GetProperty("type").GetString());
         Assert.Equal("Internal Server Error", root.GetProperty("title").GetString());
         Assert.Equal(500, root.GetProperty("status").GetInt32());
         Assert.Equal("An unexpected error occurred.", root.GetProperty("detail").GetString());
@@ -104,11 +104,11 @@ public sealed class ApiProblemDetailsTests(SpendlyApiFactory factory)
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
 
-        Assert.Equal("https://httpstatuses.com/405", root.GetProperty("type").GetString());
+        Assert.Equal("about:blank", root.GetProperty("type").GetString());
         Assert.Equal("Method Not Allowed", root.GetProperty("title").GetString());
         Assert.Equal(405, root.GetProperty("status").GetInt32());
-        Assert.Equal("An error occurred while processing the request.", root.GetProperty("detail").GetString());
-        Assert.Equal("http_error", root.GetProperty("code").GetString());
+        Assert.Equal("The HTTP method is not supported for this resource.", root.GetProperty("detail").GetString());
+        Assert.Equal("method_not_allowed", root.GetProperty("code").GetString());
 
         Assert.True(root.TryGetProperty("instance", out var instance));
         Assert.Equal(TestApiConstants.RootPath, instance.GetString());
