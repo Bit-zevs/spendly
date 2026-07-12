@@ -65,12 +65,18 @@ jobs:
 
       - name: Audit vulnerable dependencies
         run: >-
-          dotnet package list ${{ env.SOLUTION_PATH }}
+          dotnet package list
+          --project ${{ env.SOLUTION_PATH }}
           --include-transitive
           --vulnerable
+          --no-restore
 
       - name: Report outdated dependencies
-        run: dotnet package list ${{ env.SOLUTION_PATH }} --outdated
+        run: >-
+          dotnet package list
+          --project ${{ env.SOLUTION_PATH }}
+          --outdated
+          --no-restore
 
       - name: Unit tests
         run: >-
