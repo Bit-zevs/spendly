@@ -23,14 +23,6 @@ public abstract class Entity<TId> : IEquatable<Entity<TId>>
     }
 
     /// <summary>
-    /// Initializes a new entity instance for object materialization tools.
-    /// </summary>
-    protected Entity()
-    {
-        Id = default!;
-    }
-
-    /// <summary>
     /// Gets the entity identifier.
     /// </summary>
     public TId Id { get; private init; }

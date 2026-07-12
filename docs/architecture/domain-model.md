@@ -77,11 +77,8 @@ Two entities are equal when:
 Their other property values do not define entity identity.
 
 The base class rejects the default identifier value when an entity is
-constructed through its normal domain constructor.
-
-A parameterless protected constructor exists for future object materialization
-tools. It must not be used as a way to bypass domain creation rules in
-application code.
+constructed. It intentionally has no parameterless constructor, so every
+derived entity must provide a valid identifier to the base class.
 
 ### ValueObject
 
@@ -273,6 +270,13 @@ Money.Positive(25.50m, Currency.Eur);
 Money.Zero(Currency.Rub);
 ```
 
+#### Persistence materialization
+
+`Money` has a private parameterless constructor reserved for persistence
+materialization. Application code cannot call it and must continue to create
+instances through `From`, `Positive`, or `Zero`, so normal domain creation
+still enforces monetary invariants.
+
 #### Equality
 
 Two money values are equal when both values match:
@@ -381,7 +385,7 @@ Wallet currently does not contain:
 - ownership by a user;
 - update operations;
 - archive or deletion state;
-- EF Core mappings;
+- production EF Core mappings;
 - API contracts.
 
 A future balance should be derived or updated through defined transaction rules,
@@ -432,7 +436,7 @@ Category currently does not contain:
 - budget limits;
 - ownership by a user;
 - update operations;
-- EF Core mappings;
+- production EF Core mappings;
 - API contracts.
 
 ### Transaction
@@ -597,12 +601,15 @@ There are currently no:
 - transaction handlers;
 - category queries;
 - repositories;
-- EF Core configurations;
+- production EF Core configurations;
 - database tables;
 - domain API endpoints.
 
 This is intentional. The domain model is implemented and tested before adding
-application orchestration and persistence.
+application orchestration and production persistence. A test-only compatibility
+spike already verifies EF Core and PostgreSQL materialization; its findings are
+documented in
+[EF Core Domain Model Compatibility](ef-core-domain-model-compatibility.md).
 
 ## Testing
 

@@ -9,6 +9,9 @@ documentation for Spendly.
   direction, runtime flow, and implementation boundaries.
 - [Domain model](architecture/domain-model.md) — current v0.3 entities, value
   objects, identifiers, errors, and business invariants.
+- [EF Core domain model compatibility](architecture/ef-core-domain-model-compatibility.md)
+  — PostgreSQL materialization spike results, required mappings, and production
+  persistence decisions.
 
 ## Architectural decisions
 
