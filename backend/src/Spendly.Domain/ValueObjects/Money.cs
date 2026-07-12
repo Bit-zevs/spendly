@@ -6,15 +6,26 @@ namespace Spendly.Domain.ValueObjects;
 
 public sealed class Money : ValueObject, IComparable<Money>, IFormattable
 {
-    private Money(decimal amount, Currency currency)
+    private decimal _amount;
+
+    private Currency _currency = null!;
+
+    /// <summary>
+    /// Initializes an empty instance for persistence materialization.
+    /// </summary>
+    private Money()
     {
-        Amount = amount;
-        Currency = currency;
     }
 
-    public decimal Amount { get; }
+    private Money(decimal amount, Currency currency)
+    {
+        _amount = amount;
+        _currency = currency;
+    }
 
-    public Currency Currency { get; }
+    public decimal Amount => _amount;
+
+    public Currency Currency => _currency;
 
     public bool IsZero => Amount == decimal.Zero;
 
