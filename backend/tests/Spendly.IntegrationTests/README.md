@@ -27,9 +27,10 @@ The persistence compatibility tests use:
 They verify that the immutable Domain model can be saved and materialized
 without public setters or EF Core attributes.
 
-The current compatibility test covers:
+The compatibility suite covers:
 
 - private entity constructors;
+- read-only public properties and absence of public setters;
 - `Entity<TId>`;
 - strongly typed identifiers;
 - `Currency`;
@@ -38,6 +39,10 @@ The current compatibility test covers:
 - nullable `Transaction.UpdatedAt`;
 - foreign keys without navigation properties;
 - materialization in a new no-tracking `DbContext`.
+
+Fast reflection-based shape tests protect the intentionally non-public Domain
+API without requiring Docker. The PostgreSQL round-trip test verifies the real
+provider and materialization behavior.
 
 The compatibility context and configurations are test-only. They are not the
 production persistence layer.
@@ -69,11 +74,15 @@ dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
 ### Current limitations
 
 The project does not yet test:
-* production migrations;
-* repositories;
-* application persistence handlers;
-* API endpoints backed by PostgreSQL;
-* transaction isolation behavior;
-* optimistic concurrency;
-* database resiliency;
-* production database configuration.
+
+- production migrations;
+- database check constraints for Domain invariants;
+- the final decimal precision and scale policy for `Money`;
+- PostgreSQL timestamp precision beyond microseconds;
+- repositories;
+- application persistence handlers;
+- API endpoints backed by PostgreSQL;
+- transaction isolation behavior;
+- optimistic concurrency;
+- database resiliency;
+- production database configuration.

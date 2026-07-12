@@ -269,9 +269,16 @@ tests/Spendly.IntegrationTests
 
 Unit tests verify domain behavior in isolation.
 
-Integration tests start the API in memory through
-`WebApplicationFactory<Program>` and do not currently require PostgreSQL,
-Docker, or any external services.
+Integration tests include two groups:
+
+- API tests that start the application in memory through
+  `WebApplicationFactory<Program>` and do not require external services;
+- an EF Core compatibility spike that uses Testcontainers and therefore
+  requires a running Docker-compatible container engine.
+
+Running the complete solution test suite executes both groups. To run only
+API integration tests without Docker, exclude tests marked with the
+`Dependency=Docker` trait.
 
 ## Run the API locally
 

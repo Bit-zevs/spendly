@@ -26,6 +26,17 @@ Production persistence is intentionally outside the scope of this document.
 The compatibility `DbContext` and entity configurations remain in the
 integration-test project only.
 
+## Decision status
+
+The compatibility task is complete for the current Domain model. The real
+PostgreSQL round-trip demonstrates that the model can be materialized without
+public setters, public persistence constructors, or EF Core references in the
+Domain project.
+
+This is a compatibility result, not approval of a production schema. Decimal
+precision, database constraints, migrations, indexes, and operational
+persistence behavior remain separate implementation decisions.
+
 ## Tested setup
 
 The repository currently verifies the model with:
@@ -89,7 +100,9 @@ private Wallet(
 ```
 
 All constructor parameters correspond to mapped scalar properties after value
-conversion. No special parameterless constructor is required.
+conversion. No special parameterless constructor is required. Constructor
+binding is convention-based, so parameter names and CLR types are part of the
+materialization contract and should be protected by regression tests.
 
 ### Category
 
@@ -207,6 +220,11 @@ must be configured with:
 
 This prevents EF Core from treating the database as the identifier generator.
 
+The identifiers are immutable record structs and already provide value
+equality, so the current model does not require custom `ValueComparer`
+instances. This decision should be revisited only if an identifier becomes a
+mutable reference type or contains a mutable value.
+
 ## Currency
 
 `Currency` should be stored as its three-letter normalized code.
@@ -259,6 +277,12 @@ The complex-property configuration must map:
 
 The currency field also requires the `Currency` value converter.
 
+The compatibility mapping deliberately uses unconstrained PostgreSQL
+`numeric`, because the Domain has not yet defined a monetary precision and
+scale policy. Production persistence must not copy this choice blindly. A
+separate decision must define supported amount range, fractional digits, and
+rounding before configuring `HasPrecision(...)` and generating migrations.
+
 ## DateTimeOffset
 
 All current entity timestamps are normalized to UTC by the Domain.
@@ -284,6 +308,12 @@ This applies to:
 Production code must continue passing UTC `DateTimeOffset` values to Npgsql.
 The database type represents an instant in time and does not preserve the
 original input offset.
+
+PostgreSQL timestamps have microsecond precision, while .NET timestamps can
+represent 100-nanosecond ticks. Values containing sub-microsecond ticks may
+therefore be rounded or truncated during persistence. Production code must
+either normalize timestamps to microsecond precision before comparison or
+avoid assuming exact round-trip equality for finer-grained ticks.
 
 ## Nullable Transaction.UpdatedAt
 
@@ -364,6 +394,11 @@ At minimum, consider:
 Database constraints complement the Domain. They do not replace domain
 factories or business behavior.
 
+The spike uses `EnsureCreated()` only to create an isolated disposable schema.
+It does not validate migration generation, migration ordering, or upgrade paths.
+Production persistence must be verified through real migrations against a
+fresh database and against at least one supported previous schema version.
+
 ## Decisions for future production configurations
 
 Production entity configurations should:
@@ -378,7 +413,10 @@ Production entity configurations should:
 8. configure required foreign keys without forcing navigation properties into
    the Domain;
 9. reproduce important domain invariants as database constraints;
-10. keep all EF Core-specific code outside the Domain project.
+10. define explicit decimal precision and scale before mapping `Money`;
+11. account for PostgreSQL microsecond timestamp precision;
+12. validate generated migrations with PostgreSQL Testcontainers;
+13. keep all EF Core-specific code outside the Domain project.
 
 ## Minimal Domain changes
 
@@ -439,5 +477,6 @@ present in the model. Strongly typed IDs and `Currency` require value
 converters, while `Money` and `UpdatedAt` require explicit field mapping.
 
 The protected parameterless constructor previously added to `Entity<TId>` is
-not required and should be removed to preserve the non-default identifier
-invariant.
+not required and should remain absent to preserve the non-default identifier
+invariant. `Entity<TId>.Id` can remain a getter-only property because all
+concrete entities use constructor binding.

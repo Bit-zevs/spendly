@@ -25,7 +25,7 @@ public abstract class Entity<TId> : IEquatable<Entity<TId>>
     /// <summary>
     /// Gets the entity identifier.
     /// </summary>
-    public TId Id { get; private init; }
+    public TId Id { get; }
 
     public static bool operator ==(Entity<TId>? left, Entity<TId>? right)
     {
