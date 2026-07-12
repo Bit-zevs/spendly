@@ -23,7 +23,7 @@ public static class ProblemDetailsExtensions
             {
                 var problemDetails = new ValidationProblemDetails(context.ModelState)
                 {
-                    Type = ProblemDetailsDefaults.GetType(StatusCodes.Status400BadRequest),
+                    Type = ProblemDetailsDefaults.GetTypeUri(),
                     Title = "Validation Error",
                     Status = StatusCodes.Status400BadRequest,
                     Detail = "One or more validation errors occurred."
@@ -67,7 +67,7 @@ public static class ProblemDetailsExtensions
 
             var problemDetails = new ProblemDetails
             {
-                Type = ProblemDetailsDefaults.GetType(statusCode),
+                Type = ProblemDetailsDefaults.GetTypeUri(),
                 Title = ProblemDetailsDefaults.GetTitle(statusCode),
                 Status = statusCode,
                 Detail = ProblemDetailsDefaults.GetDetail(statusCode)
@@ -96,8 +96,10 @@ public static class ProblemDetailsExtensions
             statusCode = StatusCodes.Status500InternalServerError;
         }
 
+        httpContext.Response.StatusCode = statusCode;
+
         problemDetails.Status ??= statusCode;
-        problemDetails.Type ??= ProblemDetailsDefaults.GetType(statusCode);
+        problemDetails.Type ??= ProblemDetailsDefaults.GetTypeUri();
         problemDetails.Title ??= ProblemDetailsDefaults.GetTitle(statusCode);
         problemDetails.Detail ??= ProblemDetailsDefaults.GetDetail(statusCode);
         problemDetails.Instance ??= httpContext.Request.Path.Value;

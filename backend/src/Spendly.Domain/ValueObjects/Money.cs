@@ -6,6 +6,12 @@ namespace Spendly.Domain.ValueObjects;
 
 public sealed class Money : ValueObject, IComparable<Money>, IFormattable
 {
+    public const int Precision = 19;
+
+    public const int Scale = 4;
+
+    public const decimal MaxAmount = 999_999_999_999_999.9999m;
+
     private decimal _amount;
 
     private Currency _currency = null!;
@@ -38,10 +44,7 @@ public sealed class Money : ValueObject, IComparable<Money>, IFormattable
             throw new DomainException(DomainErrors.Money.CurrencyIsRequired);
         }
 
-        if (amount < decimal.Zero)
-        {
-            throw new DomainException(DomainErrors.Money.AmountIsNegative);
-        }
+        EnsureAmountIsValid(amount);
 
         return new Money(amount, currency);
     }
@@ -159,6 +162,24 @@ public sealed class Money : ValueObject, IComparable<Money>, IFormattable
     {
         yield return Amount;
         yield return Currency;
+    }
+
+    private static void EnsureAmountIsValid(decimal amount)
+    {
+        if (amount < decimal.Zero)
+        {
+            throw new DomainException(DomainErrors.Money.AmountIsNegative);
+        }
+
+        if (amount > MaxAmount)
+        {
+            throw new DomainException(DomainErrors.Money.AmountExceedsMaximum);
+        }
+
+        if (decimal.Round(amount, Scale, MidpointRounding.ToEven) != amount)
+        {
+            throw new DomainException(DomainErrors.Money.AmountHasTooManyFractionalDigits);
+        }
     }
 
     private void EnsureSameCurrency(Money other)

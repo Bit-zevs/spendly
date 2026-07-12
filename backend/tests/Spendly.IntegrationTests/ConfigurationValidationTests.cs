@@ -10,17 +10,70 @@ public sealed class ConfigurationValidationTests(SpendlyApiFactory factory)
     [InlineData("Application:Name", "", "Application:Name is required.")]
     [InlineData("Application:DisplayName", "", "Application:DisplayName is required.")]
     [InlineData("Application:Version", "", "Application:Version is required.")]
+    [InlineData(
+        "Application:Version",
+        "v0/2",
+        "Application:Version may contain only Latin letters, digits, '.', '_' and '-'; it must start with a letter or digit.")]
     [InlineData("HealthChecks:LivePath", "", "HealthChecks:LivePath is required.")]
-    [InlineData("HealthChecks:LivePath", "health/live", "HealthChecks:LivePath must start with '/'.")]
+    [InlineData(
+        "HealthChecks:LivePath",
+        "health/live",
+        "HealthChecks:LivePath must be an absolute application path without a query string or fragment.")]
+    [InlineData(
+        "HealthChecks:LivePath",
+        "/",
+        "HealthChecks:LivePath must not use the root endpoint '/'.")]
     [InlineData("HealthChecks:ReadyPath", "", "HealthChecks:ReadyPath is required.")]
-    [InlineData("HealthChecks:ReadyPath", "health/ready", "HealthChecks:ReadyPath must start with '/'.")]
-    [InlineData("HealthChecks:LivePath", TestApiConstants.ReadinessHealthPath, "HealthChecks:LivePath and HealthChecks:ReadyPath must be different.")]
+    [InlineData(
+        "HealthChecks:ReadyPath",
+        "health/ready",
+        "HealthChecks:ReadyPath must be an absolute application path without a query string or fragment.")]
+    [InlineData(
+        "HealthChecks:ReadyPath",
+        "/",
+        "HealthChecks:ReadyPath must not use the root endpoint '/'.")]
+    [InlineData(
+        "HealthChecks:LivePath",
+        TestApiConstants.ReadinessHealthPath,
+        "HealthChecks:LivePath and HealthChecks:ReadyPath must be different.")]
     [InlineData("OpenApi:Endpoint", "", "OpenApi:Endpoint is required.")]
-    [InlineData("OpenApi:Endpoint", "openapi/{documentName}.json", "OpenApi:Endpoint must start with '/'.")]
-    [InlineData("OpenApi:Endpoint", "/openapi/document.json", "OpenApi:Endpoint must contain '{documentName}'.")]
+    [InlineData(
+        "OpenApi:Endpoint",
+        "openapi/{documentName}.json",
+        "OpenApi:Endpoint must be an absolute application path without a query string or fragment.")]
+    [InlineData(
+        "OpenApi:Endpoint",
+        "/openapi/document.json",
+        "OpenApi:Endpoint must contain exactly one '{documentName}' placeholder.")]
+    [InlineData(
+        "OpenApi:Endpoint",
+        "/openapi/{documentName}/{documentName}.json",
+        "OpenApi:Endpoint must contain exactly one '{documentName}' placeholder.")]
     [InlineData("OpenApi:ScalarEndpoint", "", "OpenApi:ScalarEndpoint is required.")]
-    [InlineData("OpenApi:ScalarEndpoint", "docs", "OpenApi:ScalarEndpoint must start with '/'.")]
-    [InlineData("OpenApi:ScalarEndpoint", "/openapi/{documentName}.json", "OpenApi:Endpoint and OpenApi:ScalarEndpoint must be different.")]
+    [InlineData(
+        "OpenApi:ScalarEndpoint",
+        "docs",
+        "OpenApi:ScalarEndpoint must be an absolute application path without a query string or fragment.")]
+    [InlineData(
+        "OpenApi:ScalarEndpoint",
+        "/",
+        "OpenApi:ScalarEndpoint must not use the root endpoint '/'.")]
+    [InlineData(
+        "OpenApi:ScalarEndpoint",
+        "/openapi/{documentName}.json",
+        "OpenApi:Endpoint and OpenApi:ScalarEndpoint must be different.")]
+    [InlineData(
+        "OpenApi:ScalarEndpoint",
+        TestApiConstants.LivenessHealthPath,
+        "Root, health-check, OpenAPI and Scalar endpoint paths must be unique.")]
+    [InlineData(
+        "Infrastructure:Database:Provider",
+        "",
+        "Infrastructure:Database:Provider is required.")]
+    [InlineData(
+        "Infrastructure:Database:Provider",
+        "SqlServer",
+        "Infrastructure:Database:Provider must be 'NotConfigured' or 'PostgreSQL'.")]
     public async Task ApiHost_ShouldFailFast_WhenConfigurationIsInvalid(
         string configurationKey,
         string configurationValue,

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Spendly.Domain.Errors;
 
 namespace Spendly.UnitTests.Domain.Errors;
@@ -24,6 +25,14 @@ public sealed class DomainErrorsTests
             DomainErrors.Money.AmountMustBePositive.Code);
 
         Assert.Equal(
+            "Money.Amount.ExceedsMaximum",
+            DomainErrors.Money.AmountExceedsMaximum.Code);
+
+        Assert.Equal(
+            "Money.Amount.TooManyFractionalDigits",
+            DomainErrors.Money.AmountHasTooManyFractionalDigits.Code);
+
+        Assert.Equal(
             "Money.Currency.Required",
             DomainErrors.Money.CurrencyIsRequired.Code);
 
@@ -34,6 +43,10 @@ public sealed class DomainErrorsTests
         Assert.Equal(
             "Wallet.Name.Empty",
             DomainErrors.Wallet.NameIsEmpty.Code);
+
+        Assert.Equal(
+            "Wallet.Name.TooLong",
+            DomainErrors.Wallet.NameIsTooLong.Code);
 
         Assert.Equal(
             "Wallet.Type.Invalid",
@@ -50,6 +63,10 @@ public sealed class DomainErrorsTests
         Assert.Equal(
             "Category.Name.Empty",
             DomainErrors.Category.NameIsEmpty.Code);
+
+        Assert.Equal(
+            "Category.Name.TooLong",
+            DomainErrors.Category.NameIsTooLong.Code);
 
         Assert.Equal(
             "Category.Type.Invalid",
@@ -74,6 +91,10 @@ public sealed class DomainErrorsTests
         Assert.Equal(
             "Transaction.Amount.NotPositive",
             DomainErrors.Transaction.AmountMustBePositive.Code);
+
+        Assert.Equal(
+            "Transaction.Amount.CurrencyMismatch",
+            DomainErrors.Transaction.AmountCurrencyMismatch.Code);
 
         Assert.Equal(
             "Transaction.Wallet.Required",
@@ -101,12 +122,15 @@ public sealed class DomainErrorsTests
     }
 
     [Fact]
-    public void KnownErrors_ShouldHaveNonEmptyMessages()
+    public void KnownErrors_ShouldHaveNonEmptyCodesAndMessages()
     {
         var errors = GetKnownErrors();
 
+        Assert.NotEmpty(errors);
+
         foreach (var error in errors)
         {
+            Assert.False(string.IsNullOrWhiteSpace(error.Code));
             Assert.False(string.IsNullOrWhiteSpace(error.Message));
         }
     }
@@ -116,48 +140,45 @@ public sealed class DomainErrorsTests
     {
         var errors = GetKnownErrors();
 
-        var codes = errors
-            .Select(error => error.Code)
+        var duplicateCodes = errors
+            .GroupBy(error => error.Code, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
             .ToArray();
 
-        var uniqueCodesCount = codes
-            .Distinct(StringComparer.Ordinal)
-            .Count();
-
-        Assert.Equal(codes.Length, uniqueCodesCount);
+        Assert.Empty(duplicateCodes);
     }
 
-    private static DomainError[] GetKnownErrors()
+    [Fact]
+    public void KnownErrorCodes_ShouldFollowDomainCodeConvention()
     {
-        return
-        [
-            DomainErrors.Currency.CodeIsRequired,
-            DomainErrors.Currency.CodeHasInvalidFormat,
+        var errors = GetKnownErrors();
 
-            DomainErrors.Money.AmountIsNegative,
-            DomainErrors.Money.AmountMustBePositive,
-            DomainErrors.Money.CurrencyIsRequired,
-            DomainErrors.Money.CurrencyMismatch,
+        foreach (var error in errors)
+        {
+            var codeParts = error.Code.Split('.');
 
-            DomainErrors.Wallet.NameIsEmpty,
-            DomainErrors.Wallet.TypeIsInvalid,
-            DomainErrors.Wallet.CurrencyIsRequired,
-            DomainErrors.Wallet.CreatedAtIsInvalid,
+            Assert.True(
+                codeParts.Length >= 3,
+                $"Domain error code '{error.Code}' must contain at least three dot-separated parts.");
 
-            DomainErrors.Category.NameIsEmpty,
-            DomainErrors.Category.TypeIsInvalid,
-            DomainErrors.Category.CreatedAtIsInvalid,
+            Assert.All(
+                codeParts,
+                part => Assert.Matches("^[A-Z][A-Za-z0-9]*$", part));
+        }
+    }
 
-            DomainErrors.Transaction.TypeIsInvalid,
-            DomainErrors.Transaction.TransferIsNotSupported,
-            DomainErrors.Transaction.AmountIsRequired,
-            DomainErrors.Transaction.AmountMustBePositive,
-            DomainErrors.Transaction.WalletIsRequired,
-            DomainErrors.Transaction.CategoryIsRequired,
-            DomainErrors.Transaction.CategoryTypeMismatch,
-            DomainErrors.Transaction.OccurredAtIsInvalid,
-            DomainErrors.Transaction.DescriptionIsTooLong,
-            DomainErrors.Transaction.CreatedAtIsInvalid
-        ];
+    private static IReadOnlyList<DomainError> GetKnownErrors()
+    {
+        return typeof(DomainErrors)
+            .GetNestedTypes(BindingFlags.Public)
+            .SelectMany(type => type.GetFields(
+                BindingFlags.Public |
+                BindingFlags.Static |
+                BindingFlags.DeclaredOnly))
+            .Where(field => field.FieldType == typeof(DomainError))
+            .Select(field => Assert.IsType<DomainError>(field.GetValue(null)))
+            .OrderBy(error => error.Code, StringComparer.Ordinal)
+            .ToArray();
     }
 }

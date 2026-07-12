@@ -56,7 +56,6 @@ internal sealed class TransactionCompatibilityConfiguration
         builder
             .Property(transaction => transaction.Description)
             .HasColumnName("description")
-            .HasColumnType("character varying(500)")
             .HasMaxLength(Transaction.MaxDescriptionLength);
 
         builder
@@ -64,13 +63,6 @@ internal sealed class TransactionCompatibilityConfiguration
             .HasColumnName("created_at")
             .HasColumnType("timestamp with time zone")
             .IsRequired();
-
-        builder
-            .Property(transaction => transaction.UpdatedAt)
-            .HasField("_updatedAt")
-            .UsePropertyAccessMode(PropertyAccessMode.Field)
-            .HasColumnName("updated_at")
-            .HasColumnType("timestamp with time zone");
 
         builder
             .HasOne<Wallet>()
@@ -105,7 +97,7 @@ internal sealed class TransactionCompatibilityConfiguration
             .HasField("_amount")
             .UsePropertyAccessMode(PropertyAccessMode.Field)
             .HasColumnName("amount")
-            .HasColumnType("numeric")
+            .HasPrecision(Money.Precision, Money.Scale)
             .IsRequired();
 
         amountBuilder

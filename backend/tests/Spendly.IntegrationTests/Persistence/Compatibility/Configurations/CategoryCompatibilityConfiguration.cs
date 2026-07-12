@@ -25,7 +25,7 @@ internal sealed class CategoryCompatibilityConfiguration
         builder
             .Property(category => category.Name)
             .HasColumnName("name")
-            .HasColumnType("text")
+            .HasMaxLength(Category.MaxNameLength)
             .IsRequired();
 
         builder

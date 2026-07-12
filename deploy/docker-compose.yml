@@ -1,15 +1,25 @@
-﻿services:
+services:
   spendly-postgres:
-    image: postgres:17
-    container_name: spendly-postgres
+    image: postgres:17.10
     environment:
-      POSTGRES_DB: spendly
-      POSTGRES_USER: spendly
-      POSTGRES_PASSWORD: spendly_password
+      POSTGRES_DB: ${SPENDLY_POSTGRES_DB:-spendly}
+      POSTGRES_USER: ${SPENDLY_POSTGRES_USER:-spendly}
+      POSTGRES_PASSWORD: ${SPENDLY_POSTGRES_PASSWORD:-spendly_password}
     ports:
-      - "5432:5432"
+      - "${SPENDLY_POSTGRES_PORT:-5432}:5432"
     volumes:
       - spendly_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready
+          -U ${SPENDLY_POSTGRES_USER:-spendly}
+          -d ${SPENDLY_POSTGRES_DB:-spendly}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
 volumes:
   spendly_postgres_data:

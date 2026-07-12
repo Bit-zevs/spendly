@@ -1,9 +1,11 @@
-﻿name: Backend CI
+name: Backend CI
 
 on:
   pull_request:
     paths:
       - "backend/**"
+      - ".editorconfig"
+      - ".gitattributes"
       - ".github/workflows/backend-ci.yml"
       - "global.json"
   push:
@@ -11,6 +13,8 @@ on:
       - main
     paths:
       - "backend/**"
+      - ".editorconfig"
+      - ".gitattributes"
       - ".github/workflows/backend-ci.yml"
       - "global.json"
 
@@ -29,10 +33,12 @@ env:
   SOLUTION_PATH: backend/Spendly.sln
   UNIT_TESTS_PROJECT: backend/tests/Spendly.UnitTests/Spendly.UnitTests.csproj
   INTEGRATION_TESTS_PROJECT: backend/tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj
+  DOCKER_TEST_SETTINGS: backend/tests/docker.runsettings
+  TEST_RESULTS_DIRECTORY: backend/TestResults
 
 jobs:
   backend-ci:
-    name: Restore, build and test backend
+    name: Restore, verify, build and test backend
     runs-on: ubuntu-latest
 
     steps:
@@ -47,11 +53,49 @@ jobs:
       - name: Restore
         run: dotnet restore ${{ env.SOLUTION_PATH }}
 
+      - name: Verify formatting
+        run: dotnet format ${{ env.SOLUTION_PATH }} --verify-no-changes --no-restore --verbosity minimal
+
       - name: Build
-        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+        run: >-
+          dotnet build ${{ env.SOLUTION_PATH }}
+          --configuration ${{ env.BUILD_CONFIGURATION }}
+          --no-restore
+          -p:ContinuousIntegrationBuild=true
+
+      - name: Audit vulnerable dependencies
+        run: >-
+          dotnet package list ${{ env.SOLUTION_PATH }}
+          --include-transitive
+          --vulnerable
+
+      - name: Report outdated dependencies
+        run: dotnet package list ${{ env.SOLUTION_PATH }} --outdated
 
       - name: Unit tests
-        run: dotnet test ${{ env.UNIT_TESTS_PROJECT }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
+        run: >-
+          dotnet test ${{ env.UNIT_TESTS_PROJECT }}
+          --configuration ${{ env.BUILD_CONFIGURATION }}
+          --no-build
+          --verbosity normal
+          --collect:"XPlat Code Coverage"
+          --results-directory ${{ env.TEST_RESULTS_DIRECTORY }}/unit
 
-      - name: Integration tests
-        run: dotnet test ${{ env.INTEGRATION_TESTS_PROJECT }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
+      - name: Integration and Docker compatibility tests
+        run: >-
+          dotnet test ${{ env.INTEGRATION_TESTS_PROJECT }}
+          --configuration ${{ env.BUILD_CONFIGURATION }}
+          --no-build
+          --verbosity normal
+          --settings ${{ env.DOCKER_TEST_SETTINGS }}
+          --collect:"XPlat Code Coverage"
+          --results-directory ${{ env.TEST_RESULTS_DIRECTORY }}/integration
+
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: ${{ env.TEST_RESULTS_DIRECTORY }}
+          if-no-files-found: warn
+          retention-days: 14

@@ -258,6 +258,9 @@ currency validation, amount validation, and same-currency checks.
 
 - currency is required;
 - amount cannot be negative;
+- amount cannot exceed `Money.MaxAmount`;
+- amount can contain at most `Money.Scale` fractional digits;
+- the persistence policy is `decimal(19, 4)`;
 - `From` allows zero or a positive amount;
 - `Positive` requires an amount greater than zero;
 - `Zero` creates a zero amount for a required currency.
@@ -356,6 +359,7 @@ A wallet:
 - receives a newly generated `WalletId`;
 - must have a non-empty name;
 - trims its name before storing it;
+- limits the normalized name to `Wallet.MaxNameLength`;
 - must use a defined `WalletType`;
 - must have a currency;
 - must have a non-default creation timestamp;
@@ -409,6 +413,7 @@ A category:
 - receives a newly generated `CategoryId`;
 - must have a non-empty name;
 - trims its name before storing it;
+- limits the normalized name to `Category.MaxNameLength`;
 - must use a defined `CategoryType`;
 - must have a non-default creation timestamp;
 - stores its creation timestamp in UTC.
@@ -452,11 +457,10 @@ Current properties:
 - `CategoryId`;
 - `OccurredAt`;
 - `Description`;
-- `CreatedAt`;
-- `UpdatedAt`.
+- `CreatedAt`.
 
-`UpdatedAt` is currently initialized to `null`, because transaction update
-behavior has not been introduced yet.
+`UpdatedAt` is intentionally absent until a real transaction-editing use case
+introduces explicit domain methods that can maintain it consistently.
 
 #### Transaction types
 
@@ -470,6 +474,10 @@ The current entity supports creating:
 
 - income transactions;
 - expense transactions.
+
+Creation receives the complete `Wallet` aggregate reference, verifies that the
+transaction amount uses the same currency, and stores only `WalletId` after the
+invariant has been checked.
 
 `Transfer` is recognized as a future transaction kind but is intentionally
 rejected by the current factory.

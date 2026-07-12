@@ -6,6 +6,8 @@ namespace Spendly.Domain.Wallets;
 
 public sealed class Wallet : Entity<WalletId>
 {
+    public const int MaxNameLength = 100;
+
     private Wallet(
         WalletId id,
         string name,
@@ -56,7 +58,14 @@ public sealed class Wallet : Entity<WalletId>
             throw new DomainException(DomainErrors.Wallet.NameIsEmpty);
         }
 
-        return name.Trim();
+        var normalizedName = name.Trim();
+
+        if (normalizedName.Length > MaxNameLength)
+        {
+            throw new DomainException(DomainErrors.Wallet.NameIsTooLong);
+        }
+
+        return normalizedName;
     }
 
     private static void EnsureTypeIsValid(WalletType type)

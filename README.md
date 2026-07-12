@@ -1,4 +1,4 @@
-﻿# Spendly
+# Spendly
 
 Spendly is a personal finance assistant for tracking expenses, managing budgets,
 monitoring subscriptions, planning financial goals, and calculating daily safe
@@ -271,14 +271,16 @@ Unit tests verify domain behavior in isolation.
 
 Integration tests include two groups:
 
-- API tests that start the application in memory through
-  `WebApplicationFactory<Program>` and do not require external services;
-- an EF Core compatibility spike that uses Testcontainers and therefore
-  requires a running Docker-compatible container engine.
+- API and model-shape tests that do not require external services;
+- an explicit EF Core compatibility test that uses PostgreSQL Testcontainers.
 
-Running the complete solution test suite executes both groups. To run only
-API integration tests without Docker, exclude tests marked with the
-`Dependency=Docker` trait.
+A normal `dotnet test Spendly.sln` run does not execute explicit tests and does
+not require Docker. To include the PostgreSQL round-trip, run:
+
+```bash
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
+  --settings tests/docker.runsettings
+```
 
 ## Run the API locally
 
@@ -366,7 +368,7 @@ A typical error response contains:
 
 ```json
 {
-  "type": "https://httpstatuses.com/404",
+  "type": "about:blank",
   "title": "Not Found",
   "status": 404,
   "detail": "The requested resource was not found.",
@@ -386,17 +388,21 @@ domain API endpoints.
 
 ## Database status
 
-Entity Framework Core is not installed or configured in the current backend.
+Production Entity Framework Core persistence is not configured in the current
+backend.
 
 The project currently has:
 
-- no `DbContext`;
-- no entity configurations;
+- no production `DbContext`;
+- no production entity configurations;
 - no repositories;
 - no migrations;
 - no connection string used by the API;
-- no database health check;
-- no database-backed integration tests.
+- no database health check.
+
+A test-only EF Core compatibility context and PostgreSQL Testcontainers test
+verify that the immutable Domain model can be materialized by the real Npgsql
+provider.
 
 The Docker Compose file is preparation for a future persistence milestone:
 
@@ -425,9 +431,12 @@ The workflow:
 1. checks out the repository;
 2. installs the SDK from `global.json`;
 3. restores the solution;
-4. builds it in Release configuration;
-5. runs unit tests;
-6. runs integration tests.
+4. verifies formatting;
+5. builds in Release with warnings treated as errors;
+6. audits vulnerable and outdated dependencies;
+7. runs unit tests with coverage;
+8. runs integration and explicit Docker compatibility tests with coverage;
+9. uploads test results and coverage artifacts.
 
 The workflow is triggered for backend-related pull requests and pushes to
 `main`.

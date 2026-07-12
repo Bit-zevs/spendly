@@ -13,7 +13,7 @@ Current API test scope:
 - health check endpoint tests;
 - ProblemDetails response tests;
 - OpenAPI and Scalar availability tests;
-- configuration-driven endpoint tests.
+- configuration and route-collision validation tests.
 
 ## Persistence compatibility tests
 
@@ -33,52 +33,43 @@ The compatibility suite covers:
 - read-only public properties and absence of public setters;
 - `Entity<TId>`;
 - strongly typed identifiers;
-- `Currency`;
+- custom and predefined `Currency` values;
 - `Money` as an EF Core complex type;
-- `DateTimeOffset`;
-- nullable `Transaction.UpdatedAt`;
+- the `decimal(19, 4)` money persistence policy;
+- income and expense transactions;
+- `DateTimeOffset` normalization;
 - foreign keys without navigation properties;
 - materialization in a new no-tracking `DbContext`.
-
-Fast reflection-based shape tests protect the intentionally non-public Domain
-API without requiring Docker. The PostgreSQL round-trip test verifies the real
-provider and materialization behavior.
 
 The compatibility context and configurations are test-only. They are not the
 production persistence layer.
 
-## Requirements
+## Docker behavior
 
-API-only tests do not require Docker.
-
-Database-backed compatibility tests require a running Docker-compatible
-container engine, such as Docker Desktop.
-
-Testcontainers starts and disposes the PostgreSQL container automatically.
-
-## Running tests
-
-From the `backend` directory:
+The PostgreSQL round-trip test is marked as an explicit xUnit v3 test.
+Therefore, the normal command below runs API tests and reflection-based shape
+tests without requiring Docker:
 
 ```bash
 dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj
 ```
 
-To run only the EF Core compatibility test:
+To include the PostgreSQL Testcontainers test, run from the `backend`
+directory with a Docker-compatible container engine available:
 
 ```bash
 dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
---filter FullyQualifiedName~EfCoreDomainModelCompatibilityTests
+  --settings tests/docker.runsettings
 ```
 
-### Current limitations
+Testcontainers starts and disposes the PostgreSQL container automatically.
+
+## Current limitations
 
 The project does not yet test:
 
 - production migrations;
-- database check constraints for Domain invariants;
-- the final decimal precision and scale policy for `Money`;
-- PostgreSQL timestamp precision beyond microseconds;
+- final production database check constraints;
 - repositories;
 - application persistence handlers;
 - API endpoints backed by PostgreSQL;

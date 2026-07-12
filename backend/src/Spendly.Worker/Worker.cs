@@ -1,4 +1,4 @@
-﻿namespace Spendly.Worker;
+namespace Spendly.Worker;
 
 public sealed class Worker(ILogger<Worker> logger) : BackgroundService
 {

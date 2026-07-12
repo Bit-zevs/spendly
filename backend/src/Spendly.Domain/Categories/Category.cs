@@ -5,6 +5,8 @@ namespace Spendly.Domain.Categories;
 
 public sealed class Category : Entity<CategoryId>
 {
+    public const int MaxNameLength = 100;
+
     private Category(
         CategoryId id,
         string name,
@@ -48,7 +50,14 @@ public sealed class Category : Entity<CategoryId>
             throw new DomainException(DomainErrors.Category.NameIsEmpty);
         }
 
-        return name.Trim();
+        var normalizedName = name.Trim();
+
+        if (normalizedName.Length > MaxNameLength)
+        {
+            throw new DomainException(DomainErrors.Category.NameIsTooLong);
+        }
+
+        return normalizedName;
     }
 
     private static void EnsureTypeIsValid(CategoryType type)

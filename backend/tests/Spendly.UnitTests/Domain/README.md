@@ -136,7 +136,8 @@ Tests verify:
 - unsupported transfer rejection;
 - required monetary amount;
 - positive amount requirement;
-- required wallet identifier;
+- required wallet;
+- amount and wallet currency compatibility;
 - required category;
 - category and transaction type compatibility;
 - default timestamp rejection;

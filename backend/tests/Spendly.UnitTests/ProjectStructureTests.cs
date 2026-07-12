@@ -5,55 +5,81 @@ namespace Spendly.UnitTests;
 public sealed class ProjectStructureTests
 {
     [Fact]
-    public void UnitTestsProject_ShouldHaveExpectedTestFolders()
+    public void UnitTestsProject_ShouldReferenceOnlyDomainAndApplication()
     {
-        var projectDirectory = GetProjectDirectory();
-
-        Assert.True(
-            Directory.Exists(Path.Combine(projectDirectory.FullName, "Domain")),
-            "The UnitTests project should contain the 'Domain' folder for future domain unit tests.");
-
-        Assert.True(
-            Directory.Exists(Path.Combine(projectDirectory.FullName, "Application")),
-            "The UnitTests project should contain the 'Application' folder for future application unit tests.");
-
-        Assert.True(
-            Directory.Exists(Path.Combine(projectDirectory.FullName, "TestUtilities")),
-            "The UnitTests project should contain the 'TestUtilities' folder for shared unit test helpers.");
+        AssertProjectReferences(
+            "tests/Spendly.UnitTests/Spendly.UnitTests.csproj",
+            "../../src/Spendly.Application/Spendly.Application.csproj",
+            "../../src/Spendly.Domain/Spendly.Domain.csproj");
     }
 
     [Fact]
-    public void UnitTestsProject_ShouldReferenceOnlyDomainAndApplicationProjects()
+    public void ApplicationProject_ShouldReferenceOnlyDomain()
     {
-        var projectDirectory = GetProjectDirectory();
-        var projectFilePath = Path.Combine(projectDirectory.FullName, "Spendly.UnitTests.csproj");
+        AssertProjectReferences(
+            "src/Spendly.Application/Spendly.Application.csproj",
+            "../Spendly.Domain/Spendly.Domain.csproj");
+    }
+
+    [Fact]
+    public void InfrastructureProject_ShouldReferenceApplicationAndDomain()
+    {
+        AssertProjectReferences(
+            "src/Spendly.Infrastructure/Spendly.Infrastructure.csproj",
+            "../Spendly.Application/Spendly.Application.csproj",
+            "../Spendly.Domain/Spendly.Domain.csproj");
+    }
+
+    [Fact]
+    public void ApiProject_ShouldReferenceApplicationAndInfrastructure()
+    {
+        AssertProjectReferences(
+            "src/Spendly.Api/Spendly.Api.csproj",
+            "../Spendly.Application/Spendly.Application.csproj",
+            "../Spendly.Infrastructure/Spendly.Infrastructure.csproj");
+    }
+
+    [Fact]
+    public void WorkerProject_ShouldReferenceApplicationAndInfrastructure()
+    {
+        AssertProjectReferences(
+            "src/Spendly.Worker/Spendly.Worker.csproj",
+            "../Spendly.Application/Spendly.Application.csproj",
+            "../Spendly.Infrastructure/Spendly.Infrastructure.csproj");
+    }
+
+    private static void AssertProjectReferences(
+        string projectPathRelativeToBackend,
+        params string[] expectedReferences)
+    {
+        var projectFilePath = Path.Combine(
+            GetBackendDirectory().FullName,
+            projectPathRelativeToBackend.Replace('/', Path.DirectorySeparatorChar));
 
         var document = XDocument.Load(projectFilePath);
 
-        var projectReferences = document
-            .Descendants("ProjectReference")
-            .Select(element => ((string?)element.Attribute("Include") ?? string.Empty).Replace('\\', '/'))
+        var actualReferences = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "ProjectReference")
+            .Select(element => ((string?)element.Attribute("Include") ?? string.Empty)
+                .Replace('\\', '/'))
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        var expectedProjectReferences = new[]
-        {
-            "../../src/Spendly.Application/Spendly.Application.csproj",
-            "../../src/Spendly.Domain/Spendly.Domain.csproj"
-        };
+        var sortedExpectedReferences = expectedReferences
+            .Order(StringComparer.Ordinal)
+            .ToArray();
 
-        Assert.Equal(expectedProjectReferences, projectReferences);
+        Assert.Equal(sortedExpectedReferences, actualReferences);
     }
 
-    private static DirectoryInfo GetProjectDirectory()
+    private static DirectoryInfo GetBackendDirectory()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
         while (directory is not null)
         {
-            var projectFilePath = Path.Combine(directory.FullName, "Spendly.UnitTests.csproj");
-
-            if (File.Exists(projectFilePath))
+            if (File.Exists(Path.Combine(directory.FullName, "Spendly.sln")))
             {
                 return directory;
             }
@@ -62,6 +88,6 @@ public sealed class ProjectStructureTests
         }
 
         throw new DirectoryNotFoundException(
-            "Could not find the Spendly.UnitTests project directory.");
+            "Could not find the backend directory containing Spendly.sln.");
     }
 }
