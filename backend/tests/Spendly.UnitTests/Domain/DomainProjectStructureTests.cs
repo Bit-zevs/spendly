@@ -62,6 +62,49 @@ public sealed class DomainProjectStructureTests
         Assert.Empty(projectReferences);
     }
 
+    [Fact]
+    public void DomainProject_ShouldNotReferencePersistencePackages()
+    {
+        var domainProjectDirectory = GetDomainProjectDirectory();
+        var projectFilePath = Path.Combine(
+            domainProjectDirectory.FullName,
+            "Spendly.Domain.csproj");
+
+        var document = XDocument.Load(projectFilePath);
+
+        var persistencePackageReferences = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "PackageReference")
+            .Select(element => (string?)element.Attribute("Include") ?? string.Empty)
+            .Where(packageName =>
+                packageName.StartsWith(
+                    "Microsoft.EntityFrameworkCore",
+                    StringComparison.OrdinalIgnoreCase)
+                || packageName.StartsWith(
+                    "Npgsql",
+                    StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Empty(persistencePackageReferences);
+    }
+
+    [Fact]
+    public void DomainAssembly_ShouldNotReferenceEntityFrameworkCore()
+    {
+        var entityFrameworkReferences = typeof(Spendly.Domain.Common.Entity<>)
+            .Assembly
+            .GetReferencedAssemblies()
+            .Where(reference =>
+                reference.Name?.StartsWith(
+                    "Microsoft.EntityFrameworkCore",
+                    StringComparison.Ordinal) is true)
+            .Select(reference => reference.FullName)
+            .ToArray();
+
+        Assert.Empty(entityFrameworkReferences);
+    }
+
     private static DirectoryInfo GetDomainProjectDirectory()
     {
         var unitTestsProjectDirectory = GetUnitTestsProjectDirectory();

@@ -247,20 +247,30 @@ See [Domain Model](domain-model.md) for complete rules.
 
 ## Current persistence boundary
 
-PostgreSQL appears only in the optional Docker Compose configuration.
+PostgreSQL is available through the optional Docker Compose configuration.
 
-The current solution does not contain:
+The production projects do not yet contain:
 
-- Entity Framework Core packages;
-- a `DbContext`;
-- entity type configurations;
+- a production `DbContext`;
 - migrations;
 - repository implementations;
 - a connection string used by the API;
-- database health checks.
+- database health checks;
+- application persistence use cases.
 
-Domain entities are not persistence models. Future EF Core mappings should be
-placed in Infrastructure without introducing EF Core attributes into Domain.
+A database-backed compatibility spike exists in
+`Spendly.IntegrationTests.Persistence.Compatibility`.
+
+The spike uses EF Core, Npgsql, PostgreSQL, and Testcontainers to verify that
+the immutable Domain model can be persisted and materialized without public
+setters or EF Core attributes.
+
+The spike context and configurations are test-only. Production mappings should
+later be implemented in Infrastructure using the verified decisions.
+
+See
+[EF Core Domain Model Compatibility](ef-core-domain-model-compatibility.md)
+for the complete findings.
 
 ## Current API boundary
 

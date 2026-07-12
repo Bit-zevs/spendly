@@ -10,6 +10,35 @@ public sealed class Transaction : Entity<TransactionId>
 {
     public const int MaxDescriptionLength = 500;
 
+    private Money _amount = null!;
+
+    private DateTimeOffset? _updatedAt;
+
+    /// <summary>
+    /// Initializes a transaction for persistence materialization.
+    /// </summary>
+    /// <remarks>
+    /// The materialization constructor intentionally contains only scalar
+    /// mapped properties. Money is restored separately through field mapping.
+    /// </remarks>
+    private Transaction(
+        TransactionId id,
+        TransactionType type,
+        WalletId walletId,
+        CategoryId categoryId,
+        DateTimeOffset occurredAt,
+        string? description,
+        DateTimeOffset createdAt)
+        : base(id)
+    {
+        Type = type;
+        WalletId = walletId;
+        CategoryId = categoryId;
+        OccurredAt = occurredAt;
+        Description = description;
+        CreatedAt = createdAt;
+    }
+
     private Transaction(
         TransactionId id,
         TransactionType type,
@@ -19,21 +48,22 @@ public sealed class Transaction : Entity<TransactionId>
         DateTimeOffset occurredAt,
         string? description,
         DateTimeOffset createdAt)
-        : base(id)
+        : this(
+            id,
+            type,
+            walletId,
+            categoryId,
+            occurredAt,
+            description,
+            createdAt)
     {
-        Type = type;
-        Amount = amount;
-        WalletId = walletId;
-        CategoryId = categoryId;
-        OccurredAt = occurredAt;
-        Description = description;
-        CreatedAt = createdAt;
-        UpdatedAt = null;
+        _amount = amount;
+        _updatedAt = null;
     }
 
     public TransactionType Type { get; }
 
-    public Money Amount { get; }
+    public Money Amount => _amount;
 
     public WalletId WalletId { get; }
 
@@ -45,7 +75,7 @@ public sealed class Transaction : Entity<TransactionId>
 
     public DateTimeOffset CreatedAt { get; }
 
-    public DateTimeOffset? UpdatedAt { get; }
+    public DateTimeOffset? UpdatedAt => _updatedAt;
 
     public static Transaction Create(
         TransactionType type,

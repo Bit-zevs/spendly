@@ -137,9 +137,10 @@ Unit tests must not require:
 
 ### Spendly.IntegrationTests
 
-Starts `Spendly.Api` in memory through `WebApplicationFactory<Program>`.
+Contains two integration-test groups.
 
-Current tests cover:
+API tests start `Spendly.Api` in memory through
+`WebApplicationFactory<Program>` and cover:
 
 - API startup;
 - root endpoint;
@@ -148,8 +149,11 @@ Current tests cover:
 - configuration behavior;
 - OpenAPI and Scalar availability.
 
-Database-backed integration tests will be introduced only after persistence is
-implemented.
+Persistence compatibility tests use EF Core, Npgsql, PostgreSQL, and
+Testcontainers to verify that the immutable Domain model can be saved and
+materialized without public setters or EF Core attributes. The compatibility
+`DbContext` and configurations are test-only and are not the production
+persistence layer.
 
 ## Dependency rules
 
@@ -233,4 +237,6 @@ that documents the intended configuration shape. It does not create a database
 connection.
 
 The PostgreSQL Docker Compose file is optional preparation for a future
-milestone and is not required to build, test, or run the current API.
+milestone and is not required to build or run the current API. A
+Docker-compatible container engine is required only when running the
+database-backed EF Core compatibility test.
