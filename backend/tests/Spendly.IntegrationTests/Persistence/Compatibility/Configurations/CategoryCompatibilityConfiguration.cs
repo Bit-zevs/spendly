@@ -9,7 +9,11 @@ internal sealed class CategoryCompatibilityConfiguration
 {
     public void Configure(EntityTypeBuilder<Category> builder)
     {
-        builder.ToTable("categories");
+        builder.ToTable(
+            "categories",
+            tableBuilder => tableBuilder.HasCheckConstraint(
+                "ck_categories_type_defined",
+                "type IN (1, 2)"));
 
         builder
             .HasKey(category => category.Id)
@@ -30,8 +34,9 @@ internal sealed class CategoryCompatibilityConfiguration
 
         builder
             .Property(category => category.Type)
+            .HasConversion(CompatibilityValueConverters.CategoryTypeToInt16)
             .HasColumnName("type")
-            .HasColumnType("integer")
+            .HasColumnType("smallint")
             .IsRequired();
 
         builder

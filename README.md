@@ -402,7 +402,9 @@ The project currently has:
 
 A test-only EF Core compatibility context and PostgreSQL Testcontainers test
 verify that the immutable Domain model can be materialized by the real Npgsql
-provider.
+provider. The future storage contract is accepted in
+[ADR 0003](docs/adr/0003-define-domain-model-persistence-strategy.md), while the
+production context and migrations remain intentionally deferred.
 
 The Docker Compose file is preparation for a future persistence milestone:
 

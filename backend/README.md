@@ -245,7 +245,11 @@ that documents the intended configuration shape. It does not create a database
 connection.
 
 The PostgreSQL Docker Compose file is optional preparation for a future
-milestone and is not required to build or run the current API. The
-PostgreSQL compatibility test is explicit, so normal test execution does not
-require Docker. A Docker-compatible container engine is required only when the
-explicit test is enabled through `tests/docker.runsettings`.
+milestone and is not required to build or run the current API. The accepted
+storage contract is documented in
+[ADR 0003](../docs/adr/0003-define-domain-model-persistence-strategy.md).
+
+The PostgreSQL compatibility test is explicit, so normal test execution does
+not require Docker. Metadata-based persistence strategy tests run without a
+database connection. A Docker-compatible container engine is required only
+when the explicit test is enabled through `tests/docker.runsettings`.

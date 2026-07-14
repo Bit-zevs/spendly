@@ -619,6 +619,10 @@ spike already verifies EF Core and PostgreSQL materialization; its findings are
 documented in
 [EF Core Domain Model Compatibility](ef-core-domain-model-compatibility.md).
 
+The future storage contract is accepted in
+[ADR 0003: Define domain model persistence strategy](../adr/0003-define-domain-model-persistence-strategy.md).
+It does not add persistence concerns to the Domain project.
+
 ## Testing
 
 Domain unit tests cover:

@@ -258,15 +258,24 @@ The production projects do not yet contain:
 - database health checks;
 - application persistence use cases.
 
+The future storage contract is accepted in
+[ADR 0003: Define domain model persistence strategy](../adr/0003-define-domain-model-persistence-strategy.md).
+It fixes PostgreSQL types, value conversions, enum storage, monetary precision,
+UTC timestamp rules, naming conventions, restrictive foreign keys, migration
+deployment policy, and Testcontainers-based database testing.
+
 A database-backed compatibility spike exists in
 `Spendly.IntegrationTests.Persistence.Compatibility`.
 
 The spike uses EF Core, Npgsql, PostgreSQL, and Testcontainers to verify that
 the immutable Domain model can be persisted and materialized without public
-setters or EF Core attributes.
+setters or EF Core attributes. Metadata-based tests also protect the accepted
+storage contract without opening a database connection.
 
 The spike context and configurations are test-only. Production mappings should
-later be implemented in Infrastructure using the verified decisions.
+later be implemented in Infrastructure using ADR 0003, then covered by
+migration and PostgreSQL round-trip tests before the temporary context is
+removed.
 
 See
 [EF Core Domain Model Compatibility](ef-core-domain-model-compatibility.md)
