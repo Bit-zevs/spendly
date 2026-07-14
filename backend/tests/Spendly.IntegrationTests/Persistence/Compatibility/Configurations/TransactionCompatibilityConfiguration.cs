@@ -12,7 +12,22 @@ internal sealed class TransactionCompatibilityConfiguration
 {
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
-        builder.ToTable("transactions");
+        builder.ToTable(
+            "transactions",
+            tableBuilder =>
+            {
+                tableBuilder.HasCheckConstraint(
+                    "ck_transactions_amount_positive",
+                    "amount > 0");
+
+                tableBuilder.HasCheckConstraint(
+                    "ck_transactions_currency_code_format",
+                    "currency_code ~ '^[A-Z]{3}$'");
+
+                tableBuilder.HasCheckConstraint(
+                    "ck_transactions_type_defined",
+                    "type IN (1, 2, 3)");
+            });
 
         builder
             .HasKey(transaction => transaction.Id)
@@ -27,8 +42,9 @@ internal sealed class TransactionCompatibilityConfiguration
 
         builder
             .Property(transaction => transaction.Type)
+            .HasConversion(CompatibilityValueConverters.TransactionTypeToInt16)
             .HasColumnName("type")
-            .HasColumnType("integer")
+            .HasColumnType("smallint")
             .IsRequired();
 
         ConfigureAmount(builder);
@@ -65,6 +81,14 @@ internal sealed class TransactionCompatibilityConfiguration
             .IsRequired();
 
         builder
+            .HasIndex(transaction => transaction.WalletId)
+            .HasDatabaseName("ix_transactions_wallet_id");
+
+        builder
+            .HasIndex(transaction => transaction.CategoryId)
+            .HasDatabaseName("ix_transactions_category_id");
+
+        builder
             .HasOne<Wallet>()
             .WithMany()
             .HasForeignKey(transaction => transaction.WalletId)
@@ -97,6 +121,7 @@ internal sealed class TransactionCompatibilityConfiguration
             .HasField("_amount")
             .UsePropertyAccessMode(PropertyAccessMode.Field)
             .HasColumnName("amount")
+            .HasColumnType("numeric(19,4)")
             .HasPrecision(Money.Precision, Money.Scale)
             .IsRequired();
 
@@ -106,6 +131,7 @@ internal sealed class TransactionCompatibilityConfiguration
             .UsePropertyAccessMode(PropertyAccessMode.Field)
             .HasConversion(CompatibilityValueConverters.CurrencyToCode)
             .HasColumnName("currency_code")
+            .HasColumnType("character varying(3)")
             .HasMaxLength(Currency.CodeLength)
             .IsRequired();
     }
