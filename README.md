@@ -259,16 +259,27 @@ dotnet run --project src/Spendly.Worker/Spendly.Worker.csproj
 
 ## Current persistence status
 
-The current backend does not connect to a database.
+The API requires a PostgreSQL connection string named:
 
-The `Infrastructure:Database:Provider` configuration value is a placeholder
-that documents the intended configuration shape. It does not create a database
-connection.
+```text
+ConnectionStrings:SpendlyDatabase
+```
 
-The PostgreSQL Docker Compose file is optional preparation for a future
-milestone and is not required to build or run the current API. The accepted
-storage contract is documented in
-[ADR 0003](../docs/adr/0003-define-domain-model-persistence-strategy.md).
+The value is validated when the application starts. The API fails fast when
+the connection string is missing, malformed, or does not define `Host`,
+`Database`, and `Username`.
+
+The connection string must be provided through .NET User Secrets for local
+development or through an environment variable or a secret manager in deployed
+environments. Real credentials must not be committed to the repository.
+
+The production API still does not open a database connection because the
+production `DbContext`, entity configurations, migrations, and repositories are
+intentionally deferred to the persistence implementation milestone.
+
+The PostgreSQL Docker Compose file provides a local database instance. The
+accepted storage contract is documented in
+[ADR 0003](docs/adr/0003-define-domain-model-persistence-strategy.md).
 
 The PostgreSQL compatibility test is explicit, so normal test execution does
 not require Docker. Metadata-based persistence strategy tests run without a

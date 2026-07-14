@@ -65,8 +65,8 @@ public sealed class ApiSmokeTests(WebApplicationFactory<Program> factory)
                 {
                     [TestApiConstants.HealthChecksEnabledConfigurationKey] = "true",
                     [TestApiConstants.OpenApiEnabledConfigurationKey] = openApiEnabled ? "true" : "false",
-                    [TestApiConstants.InfrastructureDatabaseProviderConfigurationKey] =
-                        TestApiConstants.NotConfiguredDatabaseProvider
+                    [TestApiConstants.PostgreSqlConnectionStringConfigurationKey] =
+                        TestApiConstants.ValidPostgreSqlConnectionString
                 });
             });
         });
