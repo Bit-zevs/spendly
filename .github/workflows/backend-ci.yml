@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - ".config/dotnet-tools.json"
       - ".editorconfig"
       - ".gitattributes"
       - ".github/workflows/backend-ci.yml"
@@ -13,6 +14,7 @@ on:
       - main
     paths:
       - "backend/**"
+      - ".config/dotnet-tools.json"
       - ".editorconfig"
       - ".gitattributes"
       - ".github/workflows/backend-ci.yml"
@@ -50,7 +52,13 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore
+      - name: Restore local .NET tools
+        run: dotnet tool restore --tool-manifest .config/dotnet-tools.json
+
+      - name: Verify local EF Core CLI
+        run: dotnet ef --version
+
+      - name: Restore NuGet dependencies
         run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       - name: Verify formatting
