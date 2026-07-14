@@ -1,3 +1,5 @@
+using Spendly.Api.Configuration;
+
 namespace Spendly.IntegrationTests;
 
 internal static class TestApiConstants
@@ -20,9 +22,12 @@ internal static class TestApiConstants
 
     public const string HealthChecksEnabledConfigurationKey = "HealthChecks:Enabled";
     public const string OpenApiEnabledConfigurationKey = "OpenApi:Enabled";
-    public const string InfrastructureDatabaseProviderConfigurationKey = "Infrastructure:Database:Provider";
 
-    public const string NotConfiguredDatabaseProvider = "NotConfigured";
+    public const string PostgreSqlConnectionStringConfigurationKey =
+        PostgreSqlOptions.ConfigurationKey;
+
+    public const string ValidPostgreSqlConnectionString =
+        "Host=localhost;Port=5432;Database=spendly_tests;Username=spendly;Password=spendly_test_password";
 
     public const string OpenApiDocumentPath = "/openapi/" + ApiVersion + ".json";
 }

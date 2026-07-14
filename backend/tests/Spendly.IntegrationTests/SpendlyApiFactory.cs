@@ -14,7 +14,8 @@ public sealed class SpendlyApiFactory : WebApplicationFactory<Program>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Infrastructure:Database:Provider"] = "NotConfigured"
+                [TestApiConstants.PostgreSqlConnectionStringConfigurationKey] =
+                    TestApiConstants.ValidPostgreSqlConnectionString
             });
         });
     }

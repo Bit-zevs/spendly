@@ -1,8 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+    <PropertyGroup>
+        <UserSecretsId>ded646c6-9351-4a3a-ae21-020eaf647bf0</UserSecretsId>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
         <PackageReference Include="Microsoft.OpenApi" />
+        <PackageReference Include="Npgsql" />
         <PackageReference Include="Scalar.AspNetCore" />
         <PackageReference Include="Serilog.AspNetCore" />
         <PackageReference Include="Serilog.Enrichers.Environment" />

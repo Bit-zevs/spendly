@@ -67,26 +67,69 @@ public sealed class ConfigurationValidationTests(SpendlyApiFactory factory)
         TestApiConstants.LivenessHealthPath,
         "Root, health-check, OpenAPI and Scalar endpoint paths must be unique.")]
     [InlineData(
-        "Infrastructure:Database:Provider",
+        TestApiConstants.PostgreSqlConnectionStringConfigurationKey,
         "",
-        "Infrastructure:Database:Provider is required.")]
+        "Connection string 'SpendlyDatabase' is required.")]
     [InlineData(
-        "Infrastructure:Database:Provider",
-        "SqlServer",
-        "Infrastructure:Database:Provider must be 'NotConfigured' or 'PostgreSQL'.")]
+        TestApiConstants.PostgreSqlConnectionStringConfigurationKey,
+        "Host=localhost;Database",
+        "Connection string 'SpendlyDatabase' is not a valid PostgreSQL connection string.")]
+    [InlineData(
+        TestApiConstants.PostgreSqlConnectionStringConfigurationKey,
+        "Database=spendly;Username=spendly",
+        "Connection string 'SpendlyDatabase' must define Host.")]
+    [InlineData(
+        TestApiConstants.PostgreSqlConnectionStringConfigurationKey,
+        "Host=localhost;Username=spendly",
+        "Connection string 'SpendlyDatabase' must define Database.")]
+    [InlineData(
+        TestApiConstants.PostgreSqlConnectionStringConfigurationKey,
+        "Host=localhost;Database=spendly",
+        "Connection string 'SpendlyDatabase' must define Username.")]
     public async Task ApiHost_ShouldFailFast_WhenConfigurationIsInvalid(
         string configurationKey,
         string configurationValue,
         string expectedFailure)
     {
-        var configuredFactory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureAppConfiguration((_, configuration) =>
-            {
-                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        var optionsValidationException =
+            await StartApiAndGetOptionsValidationExceptionAsync(
+                new Dictionary<string, string?>
                 {
                     [configurationKey] = configurationValue
                 });
+
+        Assert.Contains(expectedFailure, optionsValidationException.Failures);
+    }
+
+    [Fact]
+    public async Task ApiHost_ShouldNotExposeDatabasePassword_WhenValidationFails()
+    {
+        const string password = "database-password-that-must-remain-secret";
+
+        var optionsValidationException =
+            await StartApiAndGetOptionsValidationExceptionAsync(
+                new Dictionary<string, string?>
+                {
+                    [TestApiConstants.PostgreSqlConnectionStringConfigurationKey] =
+                        $"Host=;Database=spendly;Username=spendly;Password={password}"
+                });
+
+        Assert.False(
+            optionsValidationException.ToString().Contains(
+                password,
+                StringComparison.Ordinal),
+            "Database configuration validation must not expose the password.");
+    }
+
+    private async Task<OptionsValidationException>
+        StartApiAndGetOptionsValidationExceptionAsync(
+            IReadOnlyDictionary<string, string?> configurationValues)
+    {
+        using var configuredFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((_, configuration) =>
+            {
+                configuration.AddInMemoryCollection(configurationValues);
             });
         });
 
@@ -99,10 +142,8 @@ public sealed class ConfigurationValidationTests(SpendlyApiFactory factory)
                 TestContext.Current.CancellationToken);
         });
 
-        var optionsValidationException = Assert.IsType<OptionsValidationException>(
+        return Assert.IsType<OptionsValidationException>(
             FindException<OptionsValidationException>(exception));
-
-        Assert.Contains(expectedFailure, optionsValidationException.Failures);
     }
 
     private static TException? FindException<TException>(Exception exception)

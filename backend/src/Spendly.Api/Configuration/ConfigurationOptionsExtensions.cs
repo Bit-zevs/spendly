@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+
 namespace Spendly.Api.Configuration;
 
 public static class ConfigurationOptionsExtensions
@@ -80,15 +82,7 @@ public static class ConfigurationOptionsExtensions
                 "Root, health-check, OpenAPI and Scalar endpoint paths must be unique.")
             .ValidateOnStart();
 
-        services.AddOptions<InfrastructureOptions>()
-            .Bind(configuration.GetRequiredSection(InfrastructureOptions.SectionName))
-            .Validate(
-                options => !string.IsNullOrWhiteSpace(options.Database.Provider),
-                "Infrastructure:Database:Provider is required.")
-            .Validate(
-                options => IsSupportedDatabaseProvider(options.Database.Provider),
-                "Infrastructure:Database:Provider must be 'NotConfigured' or 'PostgreSQL'.")
-            .ValidateOnStart();
+        AddPostgreSqlOptions(services, configuration);
 
         return services;
     }
@@ -253,15 +247,22 @@ public static class ConfigurationOptionsExtensions
                    openApiOptions.ScalarEndpoint);
     }
 
-    private static bool IsSupportedDatabaseProvider(string? provider)
+    private static void AddPostgreSqlOptions(
+        IServiceCollection services,
+        IConfiguration configuration)
     {
-        return string.Equals(
-                   provider,
-                   InfrastructureOptions.DatabaseOptions.NotConfiguredProvider,
-                   StringComparison.OrdinalIgnoreCase)
-               || string.Equals(
-                   provider,
-                   InfrastructureOptions.DatabaseOptions.PostgreSqlProvider,
-                   StringComparison.OrdinalIgnoreCase);
+        services.AddSingleton<
+            IValidateOptions<PostgreSqlOptions>,
+            PostgreSqlOptionsValidator>();
+
+        services.AddOptions<PostgreSqlOptions>()
+            .Configure(options =>
+            {
+                options.ConnectionString =
+                    configuration.GetConnectionString(
+                        PostgreSqlOptions.ConnectionStringName)
+                    ?? string.Empty;
+            })
+            .ValidateOnStart();
     }
 }

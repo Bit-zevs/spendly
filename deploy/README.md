@@ -112,9 +112,30 @@ The named volume is `spendly_postgres_data` and is mounted at
 
 ## Current backend integration status
 
-PostgreSQL is not connected to the production API or Infrastructure project.
-The solution still has no production `DbContext`, migrations, repositories,
-connection string, or database readiness health check.
+The API requires and validates PostgreSQL connection configuration, but it does
+not open a production database connection yet.
+
+The required configuration key is:
+
+```text
+ConnectionStrings:SpendlyDatabase
+```
+
+The `deploy/.env` file configures the PostgreSQL Compose container only. It is
+not automatically loaded by the locally running .NET API.
+
+For local development, store the API connection string through .NET User
+Secrets from the `backend` directory:
+
+```bash
+dotnet user-secrets set \
+  "ConnectionStrings:SpendlyDatabase" \
+  "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password" \
+  --project src/Spendly.Api/Spendly.Api.csproj
+```
+
+The solution still has no production `DbContext`, migrations, repositories, or
+database readiness health check.
 
 A test-only EF Core compatibility context uses PostgreSQL Testcontainers to
 verify the immutable Domain model. That test is explicit and does not run in a
@@ -129,6 +150,14 @@ dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
 
 ## Secrets and production environments
 
-Production credentials must not be committed to the repository. Future
-credentials should be supplied through development user secrets, environment
-variables, CI/CD secret storage, or a production secret manager.
+Real credentials must not be committed to the repository.
+
+Local development credentials should be supplied through .NET User Secrets.
+Deployed environments should use environment variables, CI/CD secret storage,
+or a dedicated production secret manager.
+
+The environment variable corresponding to the API connection string is:
+
+```text
+ConnectionStrings__SpendlyDatabase
+```

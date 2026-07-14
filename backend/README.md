@@ -413,39 +413,76 @@ Domain errors are currently used inside the domain model. Mapping domain errors
 to HTTP responses will be introduced together with application use cases and
 domain API endpoints.
 
-## Database status
+## PostgreSQL configuration and database status
 
-Production Entity Framework Core persistence is not configured in the current
-backend.
-
-The project currently has:
-
-- no production `DbContext`;
-- no production entity configurations;
-- no repositories;
-- no migrations;
-- no connection string used by the API;
-- no database health check.
-
-A test-only EF Core compatibility context and PostgreSQL Testcontainers test
-verify that the immutable Domain model can be materialized by the real Npgsql
-provider. The future storage contract is accepted in
-[ADR 0003](docs/adr/0003-define-domain-model-persistence-strategy.md), while the
-production context and migrations remain intentionally deferred.
-
-The Docker Compose file is preparation for a future persistence milestone:
+The API requires a PostgreSQL connection string named:
 
 ```text
-deploy/docker-compose.yml
+ConnectionStrings:SpendlyDatabase
 ```
 
-Starting PostgreSQL is currently optional:
+The connection string is mapped to strongly typed `PostgreSqlOptions` and
+validated during application startup. Startup fails when the value is missing,
+malformed, or does not define `Host`, `Database`, and `Username`.
+
+For local development, start PostgreSQL from the repository root:
 
 ```bash
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
-See [deploy/README.md](deploy/README.md) before using it.
+Then store the local connection string through .NET User Secrets from the
+`backend` directory:
+
+```bash
+dotnet user-secrets set \
+  "ConnectionStrings:SpendlyDatabase" \
+  "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password" \
+  --project src/Spendly.Api/Spendly.Api.csproj
+```
+
+On PowerShell:
+
+```powershell
+dotnet user-secrets set `
+  "ConnectionStrings:SpendlyDatabase" `
+  "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password" `
+  --project src/Spendly.Api/Spendly.Api.csproj
+```
+
+The same configuration can be supplied through an environment variable:
+
+```text
+ConnectionStrings__SpendlyDatabase
+```
+
+For example, in PowerShell:
+
+```powershell
+$env:ConnectionStrings__SpendlyDatabase = "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
+
+The credentials above are isolated local-development defaults from the Docker
+Compose configuration. They must not be reused in production, staging, shared
+testing environments, or publicly reachable database instances.
+
+Production Entity Framework Core persistence is still not configured. The
+project currently has:
+
+- no production `DbContext`;
+- no production entity configurations;
+- no repositories;
+- no migrations;
+- no database readiness health check.
+
+The API validates and stores the connection configuration, but does not open a
+database connection yet.
+
+A test-only EF Core compatibility context and PostgreSQL Testcontainers test
+verify that the immutable Domain model can be materialized by the real Npgsql
+provider. The storage contract is accepted in
+[ADR 0003](../docs/adr/0003-define-domain-model-persistence-strategy.md), while
+the production context and migrations remain intentionally deferred.
 
 ## Continuous integration
 
