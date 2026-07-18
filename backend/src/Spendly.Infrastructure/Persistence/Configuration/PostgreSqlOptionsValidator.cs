@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using Npgsql;
 
-namespace Spendly.Api.Configuration;
+namespace Spendly.Infrastructure.Persistence.Configuration;
 
 internal sealed class PostgreSqlOptionsValidator
     : IValidateOptions<PostgreSqlOptions>

@@ -1,4 +1,4 @@
-namespace Spendly.Api.Configuration;
+namespace Spendly.Infrastructure.Persistence.Configuration;
 
 public sealed class PostgreSqlOptions
 {

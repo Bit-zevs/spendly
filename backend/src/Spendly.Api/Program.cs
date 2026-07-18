@@ -1,6 +1,7 @@
 using Serilog;
 using Spendly.Api.Extensions;
 using Spendly.Api.Logging;
+using Spendly.Infrastructure;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -15,6 +16,7 @@ try
     builder.AddApiLogging();
 
     builder.Services.AddApiServices(builder.Configuration);
+    builder.Services.AddInfrastructure(builder.Configuration);
 
     var app = builder.Build();
 
