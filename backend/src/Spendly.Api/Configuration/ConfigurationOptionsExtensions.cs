@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Options;
-
 namespace Spendly.Api.Configuration;
 
 public static class ConfigurationOptionsExtensions
@@ -81,8 +79,6 @@ public static class ConfigurationOptionsExtensions
                 options => ConfiguredEndpointPathsAreUnique(configuration, options),
                 "Root, health-check, OpenAPI and Scalar endpoint paths must be unique.")
             .ValidateOnStart();
-
-        AddPostgreSqlOptions(services, configuration);
 
         return services;
     }
@@ -245,24 +241,5 @@ public static class ConfigurationOptionsExtensions
                && !PathsEqual(
                    openApiOptions.Endpoint,
                    openApiOptions.ScalarEndpoint);
-    }
-
-    private static void AddPostgreSqlOptions(
-        IServiceCollection services,
-        IConfiguration configuration)
-    {
-        services.AddSingleton<
-            IValidateOptions<PostgreSqlOptions>,
-            PostgreSqlOptionsValidator>();
-
-        services.AddOptions<PostgreSqlOptions>()
-            .Configure(options =>
-            {
-                options.ConnectionString =
-                    configuration.GetConnectionString(
-                        PostgreSqlOptions.ConnectionStringName)
-                    ?? string.Empty;
-            })
-            .ValidateOnStart();
     }
 }

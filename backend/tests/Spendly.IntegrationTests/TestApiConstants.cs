@@ -1,4 +1,4 @@
-using Spendly.Api.Configuration;
+using Spendly.Infrastructure.Persistence.Configuration;
 
 namespace Spendly.IntegrationTests;
 
