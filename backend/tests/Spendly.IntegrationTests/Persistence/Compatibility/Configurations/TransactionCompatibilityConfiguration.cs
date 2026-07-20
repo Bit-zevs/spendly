@@ -4,6 +4,7 @@ using Spendly.Domain.Categories;
 using Spendly.Domain.Transactions;
 using Spendly.Domain.ValueObjects;
 using Spendly.Domain.Wallets;
+using Spendly.Infrastructure.Persistence.Configuration;
 using Spendly.Infrastructure.Persistence.Converters;
 
 namespace Spendly.IntegrationTests.Persistence.Compatibility.Configurations;
@@ -21,9 +22,9 @@ internal sealed class TransactionCompatibilityConfiguration
                     "ck_transactions_amount_positive",
                     "amount > 0");
 
-                tableBuilder.HasCheckConstraint(
+                tableBuilder.HasCurrencyCodeCheckConstraint(
                     "ck_transactions_currency_code_format",
-                    "currency_code ~ '^[A-Z]{3}$'");
+                    "currency_code");
 
                 tableBuilder.HasCheckConstraint(
                     "ck_transactions_type_defined",
@@ -130,10 +131,7 @@ internal sealed class TransactionCompatibilityConfiguration
             .Property(money => money.Currency)
             .HasField("_currency")
             .UsePropertyAccessMode(PropertyAccessMode.Field)
-            .HasConversion(CompatibilityValueConverters.CurrencyToCode)
-            .HasColumnName("currency_code")
-            .HasColumnType("character varying(3)")
-            .HasMaxLength(Currency.CodeLength)
-            .IsRequired();
+            .HasCurrencyCodeMapping("currency_code");
     }
 }
+
