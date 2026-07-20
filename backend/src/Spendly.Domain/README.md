@@ -209,7 +209,8 @@ A transaction requires:
 - a creation timestamp.
 
 Descriptions are optional, normalized before storage, and limited to
-`Transaction.MaxDescriptionLength`.
+`Transaction.MaxDescriptionLength`. `UpdatedAt` is part of the transaction
+model and is initialized with `null` until a future editing use case sets it.
 
 `Transfer` is a known transaction type but is intentionally rejected by the
 current transaction factory. A correct transfer model requires at least source

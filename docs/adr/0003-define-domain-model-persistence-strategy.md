@@ -50,7 +50,7 @@ paths.
 | `Money.Amount` | `numeric(19,4)` | `decimal` with `Money.Precision` and `Money.Scale` |
 | persisted enums | `smallint` | Explicit enum-to-`short` converters |
 | `DateTimeOffset` instants | `timestamp with time zone` | UTC values only |
-| future `UpdatedAt` | nullable `timestamp with time zone` | `DateTimeOffset?` |
+| `Transaction.UpdatedAt` | nullable `timestamp with time zone` | `DateTimeOffset?` |
 
 ### Strongly typed identifiers
 
@@ -134,7 +134,7 @@ identifier.
 
 Current `CreatedAt` and `OccurredAt` values are required.
 
-A future `UpdatedAt` property is nullable:
+`Transaction.UpdatedAt` is nullable:
 
 ```text
 updated_at timestamp with time zone NULL

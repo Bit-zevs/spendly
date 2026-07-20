@@ -603,5 +603,7 @@ public sealed class TransactionTests
         Assert.Equal(
             TimeSpan.Zero,
             transaction.CreatedAt.Offset);
+
+        Assert.Null(transaction.UpdatedAt);
     }
 }

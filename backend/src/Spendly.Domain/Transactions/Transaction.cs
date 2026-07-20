@@ -26,7 +26,8 @@ public sealed class Transaction : Entity<TransactionId>
         CategoryId categoryId,
         DateTimeOffset occurredAt,
         string? description,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        DateTimeOffset? updatedAt)
         : base(id)
     {
         Type = type;
@@ -35,6 +36,7 @@ public sealed class Transaction : Entity<TransactionId>
         OccurredAt = occurredAt;
         Description = description;
         CreatedAt = createdAt;
+        UpdatedAt = updatedAt;
     }
 
     private Transaction(
@@ -53,7 +55,8 @@ public sealed class Transaction : Entity<TransactionId>
             categoryId,
             occurredAt,
             description,
-            createdAt)
+            createdAt,
+            updatedAt: null)
     {
         _amount = amount;
     }
@@ -71,6 +74,8 @@ public sealed class Transaction : Entity<TransactionId>
     public string? Description { get; }
 
     public DateTimeOffset CreatedAt { get; }
+
+    public DateTimeOffset? UpdatedAt { get; }
 
     public static Transaction Create(
         TransactionType type,

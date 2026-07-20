@@ -457,10 +457,12 @@ Current properties:
 - `CategoryId`;
 - `OccurredAt`;
 - `Description`;
-- `CreatedAt`.
+- `CreatedAt`;
+- `UpdatedAt`.
 
-`UpdatedAt` is intentionally absent until a real transaction-editing use case
-introduces explicit domain methods that can maintain it consistently.
+`UpdatedAt` is part of the initial model and is `null` for a newly created
+transaction. A future transaction-editing use case will introduce explicit
+domain methods that set it consistently.
 
 #### Transaction types
 
@@ -513,6 +515,7 @@ A currently supported transaction:
 - must have a non-default occurrence timestamp;
 - must have a non-default creation timestamp;
 - stores occurrence and creation timestamps in UTC;
+- initializes `UpdatedAt` with `null`;
 - may have an optional description;
 - trims a meaningful description;
 - converts an empty or whitespace-only description to `null`;

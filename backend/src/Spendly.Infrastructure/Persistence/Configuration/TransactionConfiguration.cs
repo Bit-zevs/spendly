@@ -3,14 +3,16 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Spendly.Domain.Categories;
 using Spendly.Domain.Transactions;
 using Spendly.Domain.Wallets;
-using Spendly.Infrastructure.Persistence.Configuration;
 using Spendly.Infrastructure.Persistence.Converters;
 
-namespace Spendly.IntegrationTests.Persistence.Compatibility.Configurations;
+namespace Spendly.Infrastructure.Persistence.Configuration;
 
-internal sealed class TransactionCompatibilityConfiguration
+internal sealed class TransactionConfiguration
     : IEntityTypeConfiguration<Transaction>
 {
+    private const string TransactionTypeCheckConstraintSql =
+        "type IN (1, 2, 3)";
+
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
         builder.ToTable(
@@ -27,7 +29,7 @@ internal sealed class TransactionCompatibilityConfiguration
 
                 tableBuilder.HasCheckConstraint(
                     "ck_transactions_type_defined",
-                    "type IN (1, 2, 3)");
+                    TransactionTypeCheckConstraintSql);
             });
 
         builder
@@ -43,12 +45,17 @@ internal sealed class TransactionCompatibilityConfiguration
 
         builder
             .Property(transaction => transaction.Type)
-            .HasConversion(CompatibilityValueConverters.TransactionTypeToInt16)
+            .HasConversion(new TransactionTypeConverter())
             .HasColumnName("type")
             .HasColumnType("smallint")
             .IsRequired();
 
-        ConfigureAmount(builder);
+        builder
+            .ComplexProperty(transaction => transaction.Amount)
+            .HasMoneyMapping(
+                moneyBackingFieldName: "_amount",
+                amountColumnName: "amount",
+                currencyColumnName: "currency_code");
 
         builder
             .Property(transaction => transaction.WalletId)
@@ -89,18 +96,6 @@ internal sealed class TransactionCompatibilityConfiguration
             .IsRequired(false);
 
         builder
-            .HasIndex(transaction => transaction.WalletId)
-            .HasDatabaseName("ix_transactions_wallet_id");
-
-        builder
-            .HasIndex(transaction => transaction.CategoryId)
-            .HasDatabaseName("ix_transactions_category_id");
-
-        builder
-            .HasIndex(transaction => transaction.OccurredAt)
-            .HasDatabaseName("ix_transactions_occurred_at");
-
-        builder
             .HasOne<Wallet>()
             .WithMany()
             .HasForeignKey(transaction => transaction.WalletId)
@@ -115,16 +110,17 @@ internal sealed class TransactionCompatibilityConfiguration
             .HasConstraintName("fk_transactions_categories_category_id")
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired();
-    }
 
-    private static void ConfigureAmount(
-        EntityTypeBuilder<Transaction> builder)
-    {
         builder
-            .ComplexProperty(transaction => transaction.Amount)
-            .HasMoneyMapping(
-                moneyBackingFieldName: "_amount",
-                amountColumnName: "amount",
-                currencyColumnName: "currency_code");
+            .HasIndex(transaction => transaction.WalletId)
+            .HasDatabaseName("ix_transactions_wallet_id");
+
+        builder
+            .HasIndex(transaction => transaction.CategoryId)
+            .HasDatabaseName("ix_transactions_category_id");
+
+        builder
+            .HasIndex(transaction => transaction.OccurredAt)
+            .HasDatabaseName("ix_transactions_occurred_at");
     }
 }

@@ -55,9 +55,10 @@ materialized state with the original Domain state.
 | `Money` | Required EF Core complex property flattened into the containing table |
 | `Money.Amount` | `numeric(19,4)` using `Money.Precision` and `Money.Scale` |
 | `WalletType`, `CategoryType`, `TransactionType` | Explicit enum-to-`short` converter and PostgreSQL `smallint` |
-| timestamps | PostgreSQL `timestamp with time zone` with UTC Domain values |
+| required timestamps | PostgreSQL `timestamp with time zone` with UTC Domain values |
+| `Transaction.UpdatedAt` | Nullable PostgreSQL `timestamp with time zone` |
 | relationships | Required foreign keys with `DeleteBehavior.Restrict` and explicit constraint names |
-| foreign-key indexes | Explicit indexes for `transactions.wallet_id` and `transactions.category_id` |
+| transaction indexes | Explicit indexes for `wallet_id`, `category_id`, and `occurred_at` |
 | database checks | Currency format, valid enum codes, and positive transaction amount |
 
 The test mappings intentionally use explicit physical names and types. They are
@@ -134,6 +135,7 @@ transactions
 currency_code
 created_at
 occurred_at
+updated_at
 ```
 
 It also verifies explicit names such as:
