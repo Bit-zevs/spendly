@@ -49,6 +49,7 @@ Every currently supported transaction must:
 - use an expense category for an expense transaction;
 - have a non-default occurrence time;
 - have a non-default creation time;
+- initialize `UpdatedAt` with `null`;
 - have no description longer than `Transaction.MaxDescriptionLength`.
 
 Transaction amounts are always positive. The transaction type defines the
@@ -57,7 +58,9 @@ direction of the money movement.
 Descriptions are optional. Empty or whitespace-only descriptions are stored as
 `null`, while meaningful descriptions are trimmed.
 
-Occurrence and creation timestamps are stored in UTC.
+Occurrence and creation timestamps are stored in UTC. `UpdatedAt` is nullable
+and remains `null` until a future transaction-editing use case updates the
+entity through explicit domain behavior.
 
 ## Category validation
 

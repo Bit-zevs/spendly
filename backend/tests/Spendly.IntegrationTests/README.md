@@ -41,6 +41,7 @@ The compatibility suite covers:
 - explicit check constraints, key names, foreign-key names, and index names;
 - income and expense transactions;
 - `DateTimeOffset` normalization and `timestamp with time zone` mapping;
+- nullable transaction `UpdatedAt` mapping;
 - restrictive foreign keys without Domain navigation properties;
 - materialization in a new no-tracking `DbContext`.
 

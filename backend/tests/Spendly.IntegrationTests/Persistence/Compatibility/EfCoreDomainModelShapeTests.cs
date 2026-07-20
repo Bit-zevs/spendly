@@ -30,6 +30,7 @@ public sealed class EfCoreDomainModelShapeTests
         AssertHasNoPublicSetter<Transaction>(nameof(Transaction.OccurredAt));
         AssertHasNoPublicSetter<Transaction>(nameof(Transaction.Description));
         AssertHasNoPublicSetter<Transaction>(nameof(Transaction.CreatedAt));
+        AssertHasNoPublicSetter<Transaction>(nameof(Transaction.UpdatedAt));
 
         AssertHasNoPublicSetter<Money>(nameof(Money.Amount));
         AssertHasNoPublicSetter<Money>(nameof(Money.Currency));
@@ -59,7 +60,8 @@ public sealed class EfCoreDomainModelShapeTests
                 typeof(CategoryId),
                 typeof(DateTimeOffset),
                 typeof(string),
-                typeof(DateTimeOffset)
+                typeof(DateTimeOffset),
+                typeof(DateTimeOffset?)
             ],
             modifiers: null);
 
