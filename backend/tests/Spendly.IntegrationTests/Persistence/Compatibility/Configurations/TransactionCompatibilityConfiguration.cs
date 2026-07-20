@@ -4,6 +4,7 @@ using Spendly.Domain.Categories;
 using Spendly.Domain.Transactions;
 using Spendly.Domain.ValueObjects;
 using Spendly.Domain.Wallets;
+using Spendly.Infrastructure.Persistence.Converters;
 
 namespace Spendly.IntegrationTests.Persistence.Compatibility.Configurations;
 
@@ -35,7 +36,7 @@ internal sealed class TransactionCompatibilityConfiguration
 
         builder
             .Property(transaction => transaction.Id)
-            .HasConversion(CompatibilityValueConverters.TransactionIdToGuid)
+            .HasConversion(new TransactionIdConverter())
             .HasColumnName("id")
             .HasColumnType("uuid")
             .ValueGeneratedNever();
@@ -51,14 +52,14 @@ internal sealed class TransactionCompatibilityConfiguration
 
         builder
             .Property(transaction => transaction.WalletId)
-            .HasConversion(CompatibilityValueConverters.WalletIdToGuid)
+            .HasConversion(new WalletIdConverter())
             .HasColumnName("wallet_id")
             .HasColumnType("uuid")
             .IsRequired();
 
         builder
             .Property(transaction => transaction.CategoryId)
-            .HasConversion(CompatibilityValueConverters.CategoryIdToGuid)
+            .HasConversion(new CategoryIdConverter())
             .HasColumnName("category_id")
             .HasColumnType("uuid")
             .IsRequired();

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Spendly.Domain.ValueObjects;
 using Spendly.Domain.Wallets;
+using Spendly.Infrastructure.Persistence.Converters;
 
 namespace Spendly.IntegrationTests.Persistence.Compatibility.Configurations;
 
@@ -29,7 +30,7 @@ internal sealed class WalletCompatibilityConfiguration
 
         builder
             .Property(wallet => wallet.Id)
-            .HasConversion(CompatibilityValueConverters.WalletIdToGuid)
+            .HasConversion(new WalletIdConverter())
             .HasColumnName("id")
             .HasColumnType("uuid")
             .ValueGeneratedNever();
