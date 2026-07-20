@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Spendly.Domain.ValueObjects;
 using Spendly.Domain.Wallets;
+using Spendly.Infrastructure.Persistence.Configuration;
 using Spendly.Infrastructure.Persistence.Converters;
 
 namespace Spendly.IntegrationTests.Persistence.Compatibility.Configurations;
@@ -15,9 +15,9 @@ internal sealed class WalletCompatibilityConfiguration
             "wallets",
             tableBuilder =>
             {
-                tableBuilder.HasCheckConstraint(
+                tableBuilder.HasCurrencyCodeCheckConstraint(
                     "ck_wallets_currency_code_format",
-                    "currency_code ~ '^[A-Z]{3}$'");
+                    "currency_code");
 
                 tableBuilder.HasCheckConstraint(
                     "ck_wallets_type_defined",
@@ -50,11 +50,7 @@ internal sealed class WalletCompatibilityConfiguration
 
         builder
             .Property(wallet => wallet.Currency)
-            .HasConversion(CompatibilityValueConverters.CurrencyToCode)
-            .HasColumnName("currency_code")
-            .HasColumnType("character varying(3)")
-            .HasMaxLength(Currency.CodeLength)
-            .IsRequired();
+            .HasCurrencyCodeMapping("currency_code");
 
         builder
             .Property(wallet => wallet.CreatedAt)
