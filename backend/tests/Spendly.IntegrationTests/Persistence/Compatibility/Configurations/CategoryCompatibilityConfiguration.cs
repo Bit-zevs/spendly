@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Spendly.Domain.Categories;
+using Spendly.Infrastructure.Persistence.Converters;
 
 namespace Spendly.IntegrationTests.Persistence.Compatibility.Configurations;
 
@@ -21,7 +22,7 @@ internal sealed class CategoryCompatibilityConfiguration
 
         builder
             .Property(category => category.Id)
-            .HasConversion(CompatibilityValueConverters.CategoryIdToGuid)
+            .HasConversion(new CategoryIdConverter())
             .HasColumnName("id")
             .HasColumnType("uuid")
             .ValueGeneratedNever();
