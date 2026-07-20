@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Spendly.Domain.Categories;
 using Spendly.Domain.Transactions;
-using Spendly.Domain.ValueObjects;
 using Spendly.Domain.Wallets;
 using Spendly.Infrastructure.Persistence.Configuration;
 using Spendly.Infrastructure.Persistence.Converters;
@@ -110,28 +109,11 @@ internal sealed class TransactionCompatibilityConfiguration
     private static void ConfigureAmount(
         EntityTypeBuilder<Transaction> builder)
     {
-        var amountBuilder = builder.ComplexProperty(
-            transaction => transaction.Amount);
-
-        amountBuilder
-            .IsRequired()
-            .HasField("_amount")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
-
-        amountBuilder
-            .Property(money => money.Amount)
-            .HasField("_amount")
-            .UsePropertyAccessMode(PropertyAccessMode.Field)
-            .HasColumnName("amount")
-            .HasColumnType("numeric(19,4)")
-            .HasPrecision(Money.Precision, Money.Scale)
-            .IsRequired();
-
-        amountBuilder
-            .Property(money => money.Currency)
-            .HasField("_currency")
-            .UsePropertyAccessMode(PropertyAccessMode.Field)
-            .HasCurrencyCodeMapping("currency_code");
+        builder
+            .ComplexProperty(transaction => transaction.Amount)
+            .HasMoneyMapping(
+                moneyBackingFieldName: "_amount",
+                amountColumnName: "amount",
+                currencyColumnName: "currency_code");
     }
 }
-
