@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Npgsql;
+using Spendly.Infrastructure.HealthChecks;
 using Spendly.Infrastructure.Persistence;
 using Spendly.Infrastructure.Persistence.Configuration;
 
@@ -28,20 +31,36 @@ public static class DependencyInjection
                     ?? string.Empty;
             });
 
-        services.AddDbContext<SpendlyDbContext>((serviceProvider, options) =>
+        services.AddSingleton<NpgsqlDataSource>(serviceProvider =>
         {
             var postgreSqlOptions = serviceProvider
                 .GetRequiredService<IOptions<PostgreSqlOptions>>()
                 .Value;
 
+            return NpgsqlDataSource.Create(
+                postgreSqlOptions.ConnectionString);
+        });
+
+        services.AddDbContext<SpendlyDbContext>((serviceProvider, options) =>
+        {
+            var dataSource = serviceProvider
+                .GetRequiredService<NpgsqlDataSource>();
+
             options.UseNpgsql(
-                postgreSqlOptions.ConnectionString,
+                dataSource,
                 npgsqlOptions =>
                 {
                     npgsqlOptions.MigrationsAssembly(
                         typeof(SpendlyDbContext).Assembly.GetName().Name!);
                 });
         });
+
+        services.AddHealthChecks()
+            .AddCheck<PostgreSqlHealthCheck>(
+                name: PostgreSqlHealthCheck.RegistrationName,
+                failureStatus: HealthStatus.Unhealthy,
+                tags: [PostgreSqlHealthCheck.ReadinessTag],
+                timeout: PostgreSqlHealthCheck.Timeout);
 
         return services;
     }

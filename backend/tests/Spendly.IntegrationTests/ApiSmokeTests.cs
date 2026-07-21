@@ -11,7 +11,7 @@ public sealed class ApiSmokeTests(WebApplicationFactory<Program> factory)
     [Fact]
     public async Task Api_ShouldStartAndReturnRootStatus()
     {
-        var client = CreateSmokeTestClient();
+        using var client = CreateSmokeTestClient();
 
         using var response = await client.GetAsync(
             TestApiConstants.RootPath,
@@ -20,15 +20,13 @@ public sealed class ApiSmokeTests(WebApplicationFactory<Program> factory)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Theory]
-    [InlineData(TestApiConstants.LivenessHealthPath)]
-    [InlineData(TestApiConstants.ReadinessHealthPath)]
-    public async Task HealthEndpoint_ShouldReturnSuccess(string path)
+    [Fact]
+    public async Task LivenessHealthEndpoint_ShouldReturnSuccess()
     {
-        var client = CreateSmokeTestClient();
+        using var client = CreateSmokeTestClient();
 
         using var response = await client.GetAsync(
-            path,
+            TestApiConstants.LivenessHealthPath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -37,7 +35,7 @@ public sealed class ApiSmokeTests(WebApplicationFactory<Program> factory)
     [Fact]
     public async Task OpenApiEndpoint_ShouldReturnSuccess_WhenEnabledInDevelopment()
     {
-        var client = CreateSmokeTestClient(
+        using var client = CreateSmokeTestClient(
             environmentName: TestApiConstants.DevelopmentEnvironment,
             openApiEnabled: true);
 
@@ -66,7 +64,7 @@ public sealed class ApiSmokeTests(WebApplicationFactory<Program> factory)
                     [TestApiConstants.HealthChecksEnabledConfigurationKey] = "true",
                     [TestApiConstants.OpenApiEnabledConfigurationKey] = openApiEnabled ? "true" : "false",
                     [TestApiConstants.PostgreSqlConnectionStringConfigurationKey] =
-                        TestApiConstants.ValidPostgreSqlConnectionString
+                        TestApiConstants.UnavailablePostgreSqlConnectionString
                 });
             });
         });

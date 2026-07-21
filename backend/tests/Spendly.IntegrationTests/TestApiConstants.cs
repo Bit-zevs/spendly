@@ -26,8 +26,8 @@ internal static class TestApiConstants
     public const string PostgreSqlConnectionStringConfigurationKey =
         PostgreSqlOptions.ConfigurationKey;
 
-    public const string ValidPostgreSqlConnectionString =
-        "Host=localhost;Port=5432;Database=spendly_tests;Username=spendly;Password=spendly_test_password";
+    public const string UnavailablePostgreSqlConnectionString =
+        "Host=127.0.0.1;Port=1;Database=spendly_tests;Username=spendly;Password=spendly_test_password;Timeout=1;Command Timeout=1";
 
     public const string OpenApiDocumentPath = "/openapi/" + ApiVersion + ".json";
 }

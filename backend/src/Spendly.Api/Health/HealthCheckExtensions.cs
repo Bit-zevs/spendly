@@ -59,7 +59,7 @@ public static class HealthCheckExtensions
             .WithName("GetReadinessHealth")
             .WithTags("Health Checks")
             .WithSummary("Get readiness health")
-            .WithDescription("Checks whether the API is ready to serve traffic.")
+            .WithDescription("Checks whether the API and its required dependencies are ready to serve traffic.")
             .Produces<HealthCheckResponse>(StatusCodes.Status200OK, JsonContentType)
             .Produces<HealthCheckResponse>(StatusCodes.Status503ServiceUnavailable, JsonContentType);
 

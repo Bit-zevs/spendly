@@ -14,7 +14,7 @@ public sealed class ConfigurationDrivenEndpointTests(SpendlyApiFactory factory)
         const string customLivePath = "/internal/health/live";
         const string customReadyPath = "/internal/health/ready";
 
-        var client = factory
+        using var client = factory
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureAppConfiguration((_, configuration) =>
@@ -45,9 +45,15 @@ public sealed class ConfigurationDrivenEndpointTests(SpendlyApiFactory factory)
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, liveResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, readyResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, defaultLiveResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, defaultReadyResponse.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.ServiceUnavailable,
+            readyResponse.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            defaultLiveResponse.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            defaultReadyResponse.StatusCode);
     }
 
     [Fact]
@@ -56,12 +62,14 @@ public sealed class ConfigurationDrivenEndpointTests(SpendlyApiFactory factory)
         const string customOpenApiEndpoint = "/metadata/{documentName}.json";
         const string customScalarEndpoint = "/reference";
 
-        var customOpenApiDocumentPath = $"/metadata/{TestApiConstants.ApiVersion}.json";
+        var customOpenApiDocumentPath =
+            $"/metadata/{TestApiConstants.ApiVersion}.json";
 
-        var client = factory
+        using var client = factory
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment(TestApiConstants.DevelopmentEnvironment);
+                builder.UseEnvironment(
+                    TestApiConstants.DevelopmentEnvironment);
 
                 builder.ConfigureAppConfiguration((_, configuration) =>
                 {
@@ -91,14 +99,26 @@ public sealed class ConfigurationDrivenEndpointTests(SpendlyApiFactory factory)
             TestApiConstants.DocsPathWithTrailingSlash,
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.OK, customDocumentResponse.StatusCode);
-        Assert.Equal("application/json", customDocumentResponse.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(
+            HttpStatusCode.OK,
+            customDocumentResponse.StatusCode);
+        Assert.Equal(
+            "application/json",
+            customDocumentResponse.Content.Headers.ContentType?.MediaType);
 
-        Assert.Equal(HttpStatusCode.OK, customScalarResponse.StatusCode);
-        Assert.Equal("text/html", customScalarResponse.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(
+            HttpStatusCode.OK,
+            customScalarResponse.StatusCode);
+        Assert.Equal(
+            "text/html",
+            customScalarResponse.Content.Headers.ContentType?.MediaType);
 
-        Assert.Equal(HttpStatusCode.NotFound, defaultDocumentResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, defaultDocsResponse.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            defaultDocumentResponse.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            defaultDocsResponse.StatusCode);
 
         var json = await customDocumentResponse.Content.ReadAsStringAsync(
             TestContext.Current.CancellationToken);
@@ -106,7 +126,11 @@ public sealed class ConfigurationDrivenEndpointTests(SpendlyApiFactory factory)
         using var document = JsonDocument.Parse(json);
         var info = document.RootElement.GetProperty("info");
 
-        Assert.Equal(TestApiConstants.ApiTitle, info.GetProperty("title").GetString());
-        Assert.Equal(TestApiConstants.ApiVersion, info.GetProperty("version").GetString());
+        Assert.Equal(
+            TestApiConstants.ApiTitle,
+            info.GetProperty("title").GetString());
+        Assert.Equal(
+            TestApiConstants.ApiVersion,
+            info.GetProperty("version").GetString());
     }
 }
