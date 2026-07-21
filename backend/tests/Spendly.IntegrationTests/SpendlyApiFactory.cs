@@ -15,7 +15,7 @@ public sealed class SpendlyApiFactory : WebApplicationFactory<Program>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 [TestApiConstants.PostgreSqlConnectionStringConfigurationKey] =
-                    TestApiConstants.ValidPostgreSqlConnectionString
+                    TestApiConstants.UnavailablePostgreSqlConnectionString
             });
         });
     }

@@ -2,5 +2,6 @@
 <RunSettings>
   <xUnit>
     <Explicit>on</Explicit>
+    <ParallelizeTestCollections>false</ParallelizeTestCollections>
   </xUnit>
 </RunSettings>

@@ -370,22 +370,20 @@ and environment rules are changed intentionally.
 
 ## Health checks
 
-Liveness:
+`/health/live` verifies only that the API process can respond and does not
+run dependency checks.
 
-```text
-GET https://localhost:7037/health/live
-```
+`/health/ready` runs both the application self-check and a PostgreSQL readiness
+check. The PostgreSQL check opens a connection, executes `SELECT 1`, and has a
+five-second timeout.
 
-Readiness:
+When PostgreSQL is available, readiness returns `200 OK` with `Healthy`. When
+PostgreSQL is unavailable, readiness returns `503 Service Unavailable` with
+`Unhealthy`, while liveness remains `200 OK`.
 
-```text
-GET https://localhost:7037/health/ready
-```
-
-The current health checks verify the application process only.
-
-They do not check PostgreSQL or other external dependencies because those
-dependencies are not connected yet.
+The response contains only safe descriptions. The connection string, password,
+and Npgsql exception details are not included. The check does not create or
+modify the database schema and never applies migrations.
 
 ## Error handling
 

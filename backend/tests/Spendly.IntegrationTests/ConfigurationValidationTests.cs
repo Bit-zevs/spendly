@@ -149,13 +149,31 @@ public sealed class ConfigurationValidationTests(SpendlyApiFactory factory)
     private static TException? FindException<TException>(Exception exception)
         where TException : Exception
     {
-        for (var currentException = exception;
-             currentException is not null;
-             currentException = currentException.InnerException)
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var pendingExceptions = new Stack<Exception>();
+        pendingExceptions.Push(exception);
+
+        while (pendingExceptions.TryPop(out var currentException))
         {
             if (currentException is TException expectedException)
             {
                 return expectedException;
+            }
+
+            if (currentException is AggregateException aggregateException)
+            {
+                foreach (var innerException in aggregateException.InnerExceptions)
+                {
+                    pendingExceptions.Push(innerException);
+                }
+
+                continue;
+            }
+
+            if (currentException.InnerException is not null)
+            {
+                pendingExceptions.Push(currentException.InnerException);
             }
         }
 
