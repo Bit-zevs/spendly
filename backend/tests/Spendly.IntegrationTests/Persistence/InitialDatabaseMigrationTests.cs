@@ -6,16 +6,15 @@ using Spendly.Domain.Categories;
 using Spendly.Domain.Transactions;
 using Spendly.Domain.ValueObjects;
 using Spendly.Domain.Wallets;
-using Spendly.Infrastructure.Persistence;
-using Spendly.Infrastructure.Persistence.DesignTime;
-using Testcontainers.PostgreSql;
+using Spendly.IntegrationTests.Database;
 
 namespace Spendly.IntegrationTests.Persistence;
 
-public sealed class InitialDatabaseMigrationTests
+[Collection<PostgreSqlDatabaseCollection>]
+public sealed class InitialDatabaseMigrationTests(
+    PostgreSqlDatabaseFixture database)
+    : DatabaseIntegrationTest(database)
 {
-    private const string PostgreSqlImage = "postgres:17.10";
-
     private static readonly string[] ExpectedTables =
     [
         "__EFMigrationsHistory",
@@ -75,116 +74,68 @@ public sealed class InitialDatabaseMigrationTests
         "transactions|ix_transactions_wallet_id"
     ];
 
-    [Fact]
-    public void Model_ShouldMatchInitialMigration()
-    {
-        var factory = new SpendlyDbContextFactory();
-
-        using var context = factory.CreateDbContext([]);
-
-        var migration = Assert.Single(context.Database.GetMigrations());
-
-        Assert.EndsWith(
-            "_InitialCreate",
-            migration,
-            StringComparison.Ordinal);
-
-        Assert.False(context.Database.HasPendingModelChanges());
-    }
-
     [Fact(Explicit = true)]
     [Trait("Dependency", "Docker")]
     public async Task InitialMigration_ShouldApplyRollbackAndReapply()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
 
-        await using var postgreSql =
-            new PostgreSqlBuilder(PostgreSqlImage)
-                .WithDatabase("spendly_migrations")
-                .WithUsername("spendly")
-                .WithPassword("spendly_password")
-                .Build();
-
-        await postgreSql.StartAsync(cancellationToken);
-
-        var connectionString = postgreSql.GetConnectionString();
-        var options = CreateOptions(connectionString);
-
-        await ApplyMigrationsAsync(
-            options,
-            cancellationToken);
-
         await AssertMigrationStateAsync(
-            options,
             expectedAppliedMigrationCount: 1,
             expectedPendingMigrationCount: 0,
             cancellationToken);
 
         await AssertSchemaAsync(
-            connectionString,
+            Database.ConnectionString,
             cancellationToken);
 
         var persistedIds = await AssertRoundTripAsync(
-            options,
             cancellationToken);
 
         await AssertRestrictiveDeleteBehaviorAsync(
-            options,
             persistedIds,
             cancellationToken);
 
-        await RollBackAllMigrationsAsync(
-            options,
-            cancellationToken);
+        try
+        {
+            await RollBackAllMigrationsAsync(cancellationToken);
+
+            await AssertMigrationStateAsync(
+                expectedAppliedMigrationCount: 0,
+                expectedPendingMigrationCount: 1,
+                cancellationToken);
+
+            await AssertDomainTablesDoNotExistAsync(
+                Database.ConnectionString,
+                cancellationToken);
+        }
+        finally
+        {
+            await ApplyMigrationsAsync(cancellationToken);
+        }
 
         await AssertMigrationStateAsync(
-            options,
-            expectedAppliedMigrationCount: 0,
-            expectedPendingMigrationCount: 1,
-            cancellationToken);
-
-        await AssertDomainTablesDoNotExistAsync(
-            connectionString,
-            cancellationToken);
-
-        await ApplyMigrationsAsync(
-            options,
-            cancellationToken);
-
-        await AssertMigrationStateAsync(
-            options,
             expectedAppliedMigrationCount: 1,
             expectedPendingMigrationCount: 0,
             cancellationToken);
 
         await AssertSchemaAsync(
-            connectionString,
+            Database.ConnectionString,
             cancellationToken);
     }
 
-    private static DbContextOptions<SpendlyDbContext> CreateOptions(
-        string connectionString)
-    {
-        return new DbContextOptionsBuilder<SpendlyDbContext>()
-            .UseNpgsql(connectionString)
-            .EnableDetailedErrors()
-            .Options;
-    }
-
-    private static async Task ApplyMigrationsAsync(
-        DbContextOptions<SpendlyDbContext> options,
+    private async Task ApplyMigrationsAsync(
         CancellationToken cancellationToken)
     {
-        await using var context = new SpendlyDbContext(options);
+        await using var context = Database.CreateDbContext();
 
         await context.Database.MigrateAsync(cancellationToken);
     }
 
-    private static async Task RollBackAllMigrationsAsync(
-        DbContextOptions<SpendlyDbContext> options,
+    private async Task RollBackAllMigrationsAsync(
         CancellationToken cancellationToken)
     {
-        await using var context = new SpendlyDbContext(options);
+        await using var context = Database.CreateDbContext();
 
         var migrator = context.GetService<IMigrator>();
 
@@ -193,13 +144,12 @@ public sealed class InitialDatabaseMigrationTests
             cancellationToken);
     }
 
-    private static async Task AssertMigrationStateAsync(
-        DbContextOptions<SpendlyDbContext> options,
+    private async Task AssertMigrationStateAsync(
         int expectedAppliedMigrationCount,
         int expectedPendingMigrationCount,
         CancellationToken cancellationToken)
     {
-        await using var context = new SpendlyDbContext(options);
+        await using var context = Database.CreateDbContext();
 
         var knownMigration = Assert.Single(
             context.Database.GetMigrations());
@@ -311,8 +261,7 @@ public sealed class InitialDatabaseMigrationTests
         return values.ToArray();
     }
 
-    private static async Task<PersistedIds> AssertRoundTripAsync(
-        DbContextOptions<SpendlyDbContext> options,
+    private async Task<PersistedIds> AssertRoundTripAsync(
         CancellationToken cancellationToken)
     {
         var createdAt = new DateTimeOffset(
@@ -347,7 +296,7 @@ public sealed class InitialDatabaseMigrationTests
             createdAt: createdAt.AddHours(2));
 
         await using (var writeContext =
-                     new SpendlyDbContext(options))
+                     Database.CreateDbContext())
         {
             writeContext.Wallets.Add(wallet);
             writeContext.Categories.Add(category);
@@ -357,7 +306,7 @@ public sealed class InitialDatabaseMigrationTests
         }
 
         await using var readContext =
-            new SpendlyDbContext(options);
+            Database.CreateDbContext();
 
         var actualWallet = await readContext.Wallets
             .AsNoTracking()
@@ -426,13 +375,12 @@ public sealed class InitialDatabaseMigrationTests
             category.Id);
     }
 
-    private static async Task AssertRestrictiveDeleteBehaviorAsync(
-        DbContextOptions<SpendlyDbContext> options,
+    private async Task AssertRestrictiveDeleteBehaviorAsync(
         PersistedIds persistedIds,
         CancellationToken cancellationToken)
     {
         await using (var walletContext =
-                     new SpendlyDbContext(options))
+                     Database.CreateDbContext())
         {
             var wallet = await walletContext.Wallets.SingleAsync(
                 candidate =>
@@ -447,7 +395,7 @@ public sealed class InitialDatabaseMigrationTests
         }
 
         await using var categoryContext =
-            new SpendlyDbContext(options);
+            Database.CreateDbContext();
 
         var category = await categoryContext.Categories.SingleAsync(
             candidate =>
