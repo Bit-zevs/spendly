@@ -71,6 +71,15 @@ jobs:
           --no-restore
           -p:ContinuousIntegrationBuild=true
 
+      - name: Verify EF Core migration model
+        run: >-
+          dotnet ef migrations has-pending-model-changes
+          --project backend/src/Spendly.Infrastructure/Spendly.Infrastructure.csproj
+          --startup-project backend/src/Spendly.Api/Spendly.Api.csproj
+          --context SpendlyDbContext
+          --configuration ${{ env.BUILD_CONFIGURATION }}
+          --no-build
+
       - name: Audit vulnerable dependencies
         run: >-
           dotnet package list

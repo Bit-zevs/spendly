@@ -4,9 +4,9 @@ using Spendly.Domain.Transactions;
 using Spendly.Domain.ValueObjects;
 using Spendly.Domain.Wallets;
 
-namespace Spendly.IntegrationTests.Persistence.Compatibility;
+namespace Spendly.IntegrationTests.Persistence;
 
-public sealed class EfCoreDomainModelShapeTests
+public sealed class DomainModelPersistenceShapeTests
 {
     [Fact]
     public void PersistedDomainProperties_ShouldNotExposePublicSetters()
@@ -69,7 +69,8 @@ public sealed class EfCoreDomainModelShapeTests
         Assert.True(transactionConstructor.IsPrivate);
     }
 
-    private static void AssertHasNoPublicSetter<TEntity>(string propertyName)
+    private static void AssertHasNoPublicSetter<TEntity>(
+        string propertyName)
     {
         var property = typeof(TEntity).GetProperty(
             propertyName,
