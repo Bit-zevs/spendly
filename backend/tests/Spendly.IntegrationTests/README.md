@@ -57,17 +57,34 @@ Database integration tests use:
 6. disposes the Npgsql data source and removes the container after the
    collection finishes.
 
-All database test classes belong to `PostgreSqlDatabaseCollection` and inherit
-from `DatabaseIntegrationTest`. Tests in this collection are serialized so that
-a shared database reset cannot race with another database test.
+All shared database test classes belong to `PostgreSqlDatabaseCollection`
+and inherit from `DatabaseIntegrationTest`. Tests in this collection are
+serialized so that a shared database reset cannot race with another database
+test.
 
-The migration integration test additionally verifies:
+`InitialDatabaseMigrationTests` additionally verifies:
 
 - applied and pending migration state;
 - the physical PostgreSQL schema;
 - a real write/read round trip through separate contexts;
 - restrictive foreign keys;
 - rollback to the empty migration and successful reapplication.
+
+`MigrationSmokeTests` intentionally uses a dedicated empty PostgreSQL container
+instead of the shared migrated fixture. The smoke test:
+
+1. verifies that the initial `public` schema contains no tables;
+2. reads every migration known to the production `SpendlyDbContext`;
+3. confirms that no migration is already applied;
+4. applies the complete migration pipeline through `MigrateAsync()`;
+5. compares known and applied migration identifiers in order;
+6. confirms that no pending migration remains;
+7. compares the complete final table set with the expected schema;
+8. creates a fresh `SpendlyDbContext` and executes queries against every
+   production `DbSet`.
+
+The smoke test does not use `EnsureCreated()` and does not assume a fixed number
+of migrations.
 
 The PostgreSQL readiness health-check test intentionally uses a separate empty
 container. Its contract requires the health check to leave the schema unchanged,
