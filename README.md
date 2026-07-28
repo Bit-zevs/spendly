@@ -1,8 +1,8 @@
 # Spendly
 
-Spendly is a personal finance assistant for tracking money, managing budgets,
-monitoring subscriptions, planning financial goals, and calculating a safe
-amount to spend each day.
+Spendly is being built as a personal finance assistant for tracking money,
+managing budgets, monitoring subscriptions, planning financial goals, and
+calculating a safe amount to spend each day.
 
 The product is being developed as a modular monolith with Clean Architecture
 Lite. The repository currently contains the backend foundation, the first
@@ -30,7 +30,8 @@ The current milestone includes:
   EF Core model changes.
 
 Application use cases, repositories, authentication, and domain feature
-endpoints are not implemented yet.
+endpoints are not implemented yet. Product vision and MVP documents describe
+target capabilities; the delivered state is tracked separately.
 
 ## Repository structure
 
@@ -138,6 +139,7 @@ change the public HTTP feature contract.
 
 - [Backend development guide](backend/README.md)
 - [Documentation index](docs/README.md)
+- [Product delivery status](docs/product/delivery-status.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Domain model](docs/architecture/domain-model.md)
 - [Persistence architecture](docs/architecture/persistence.md)

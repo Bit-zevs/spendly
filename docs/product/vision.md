@@ -1,27 +1,61 @@
-﻿# Spendly Product Vision
+# Spendly Product Vision
 
-Spendly is a personal finance assistant for expense tracking, budgeting, subscriptions, financial goals and daily safe spending calculation.
+Spendly is being built as a personal finance assistant for expense tracking,
+budgeting, subscription awareness, financial goals, and daily safe-spend
+calculation.
 
 ## Main value
 
-Spendly helps users answer the question: "How much money can I safely spend today without breaking my monthly budget?"
+Spendly should help a user answer:
 
-## Target users
+> How much money can I safely spend today without breaking my monthly budget?
 
-- Students
-- Young specialists
-- Freelancers
-- Couples and families later
+## Initial target user
 
-## Core features
+The first product release targets an individual user who manually records and
+reviews personal finances.
 
-- Wallets
-- Income and expenses
-- Categories
-- Monthly budgets
-- Daily safe spend
-- Subscriptions later
-- Financial goals later
-- Telegram quick expense input later
-- Web application first
-- Mobile application later
+Initial user groups include:
+
+- students;
+- young specialists;
+- freelancers.
+
+Shared household and family workflows belong to a later product stage.
+
+## First-MVP capabilities
+
+- registration and login;
+- wallets;
+- income and expense transactions;
+- categories;
+- transaction history;
+- monthly budgets;
+- daily safe-spend calculation;
+- basic dashboard;
+- web application as the first client.
+
+## Post-MVP directions
+
+- subscription management;
+- financial goals;
+- Telegram quick expense input;
+- shared and family budgets;
+- mobile applications;
+- bank integrations;
+- advanced analytics.
+
+These directions are product options rather than commitments to a fixed order.
+They should be prioritized from validated user needs and implemented through
+explicit product milestones.
+
+## Current implementation
+
+The current repository contains backend, Domain, PostgreSQL persistence,
+migration, readiness, testing, and CI foundations. It does not yet provide the
+end-user workflows listed in the first-MVP capabilities.
+
+See:
+
+- [MVP Scope](mvp-scope.md)
+- [Product Delivery Status](delivery-status.md)

@@ -1,7 +1,7 @@
 # Spendly Documentation
 
-This directory contains the product, architecture, and architectural decision
-documentation for Spendly.
+This directory contains product, architecture, operational, and architectural
+decision documentation for Spendly.
 
 ## Architecture
 
@@ -23,16 +23,22 @@ documentation for Spendly.
 - [ADR 0003: Define domain model persistence strategy](adr/0003-define-domain-model-persistence-strategy.md)
 
 Architectural Decision Records preserve the context and rationale of important
-technical or domain decisions. A later implementation update should be recorded
-without rewriting the original decision as though it had always existed.
+technical or domain decisions. When a decision is implemented, superseded, or
+reconsidered, update its status without rewriting its original context as
+though it had always described the final implementation.
 
 ## Product
 
-- [Product vision](product/vision.md)
-- [MVP scope](product/mvp-scope.md)
+- [Product delivery status](product/delivery-status.md) — the source of truth
+  for what is actually implemented now.
+- [MVP scope](product/mvp-scope.md) — the agreed target boundary of the first
+  useful product release.
+- [Product vision](product/vision.md) — the long-term user value and possible
+  product directions.
 
-Product documents describe what Spendly should provide to users. Architecture
-documents describe how the software is organized and operated.
+Product vision and MVP scope describe intended outcomes. They do not prove that
+a feature is already available. Current implementation progress belongs in the
+product delivery status and the relevant architecture or operational document.
 
 ## Additional documentation
 
@@ -42,3 +48,19 @@ documents describe how the software is organized and operated.
 - [Unit tests](../backend/tests/Spendly.UnitTests/README.md)
 - [Integration tests](../backend/tests/Spendly.IntegrationTests/README.md)
 - [Local infrastructure](../deploy/README.md)
+
+## Documentation maintenance
+
+When production behavior changes, update in the same pull request:
+
+- the product delivery status when a user-facing capability advances;
+- the repository or backend overview when the current milestone changes;
+- architecture documents when boundaries, mappings, runtime flows, or
+  operational rules change;
+- command examples when project paths, tooling, configuration keys, or launch
+  profiles change;
+- the relevant ADR implementation status when an accepted decision is
+  implemented or superseded.
+
+Do not replace historical ADR context with current-state prose. Record the new
+implementation status or add a focused follow-up ADR instead.

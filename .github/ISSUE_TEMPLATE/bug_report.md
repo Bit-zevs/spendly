@@ -1,4 +1,4 @@
-﻿---
+---
 name: Bug report
 about: Report a bug
 title: "fix: "
@@ -26,5 +26,6 @@ What happens now?
 ## Definition of Done
 
 - [ ] Bug is fixed
-- [ ] Regression test is added if possible
+- [ ] Regression test is added when practical
+- [ ] Documentation is updated when behavior, configuration, or commands change
 - [ ] CI checks pass
