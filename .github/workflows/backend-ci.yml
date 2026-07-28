@@ -45,10 +45,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -101,22 +101,52 @@ jobs:
           --configuration ${{ env.BUILD_CONFIGURATION }}
           --no-build
           --verbosity normal
+          --logger "trx;LogFileName=unit-tests.trx"
           --collect:"XPlat Code Coverage"
           --results-directory ${{ env.TEST_RESULTS_DIRECTORY }}/unit
 
-      - name: Integration and Docker compatibility tests
+      - name: API and metadata integration tests
+        run: >-
+          dotnet test ${{ env.INTEGRATION_TESTS_PROJECT }}
+          --configuration ${{ env.BUILD_CONFIGURATION }}
+          --no-build
+          --verbosity normal
+          --logger "trx;LogFileName=integration-tests.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ${{ env.TEST_RESULTS_DIRECTORY }}/integration
+
+      - name: Verify Docker availability
+        run: |
+          docker version
+          docker info
+
+      - name: PostgreSQL Testcontainers tests
         run: >-
           dotnet test ${{ env.INTEGRATION_TESTS_PROJECT }}
           --configuration ${{ env.BUILD_CONFIGURATION }}
           --no-build
           --verbosity normal
           --settings ${{ env.DOCKER_TEST_SETTINGS }}
+          --filter "Dependency=Docker&FullyQualifiedName!~MigrationSmokeTests"
+          --logger "trx;LogFileName=postgresql-tests.trx"
           --collect:"XPlat Code Coverage"
-          --results-directory ${{ env.TEST_RESULTS_DIRECTORY }}/integration
+          --results-directory ${{ env.TEST_RESULTS_DIRECTORY }}/postgresql
+
+      - name: Migration smoke test
+        run: >-
+          dotnet test ${{ env.INTEGRATION_TESTS_PROJECT }}
+          --configuration ${{ env.BUILD_CONFIGURATION }}
+          --no-build
+          --verbosity normal
+          --settings ${{ env.DOCKER_TEST_SETTINGS }}
+          --filter "FullyQualifiedName~MigrationSmokeTests"
+          --logger "trx;LogFileName=migration-smoke-tests.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ${{ env.TEST_RESULTS_DIRECTORY }}/migrations
 
       - name: Upload test results and coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-test-results
           path: ${{ env.TEST_RESULTS_DIRECTORY }}
