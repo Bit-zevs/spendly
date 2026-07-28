@@ -1,124 +1,160 @@
 # Spendly.IntegrationTests
 
-Integration tests for Spendly API and infrastructure boundaries.
+Integration tests for Spendly API and Infrastructure boundaries.
+
+## Test groups
+
+The project contains three execution groups:
+
+1. API integration tests;
+2. EF Core metadata tests without Docker;
+3. explicit PostgreSQL Testcontainers tests.
+
+A normal test run executes the first two groups. Docker-backed tests are enabled
+through `tests/docker.runsettings`.
 
 ## API tests
 
 API tests start the application in memory through
-`WebApplicationFactory<Program>` and send HTTP requests through `HttpClient`.
+`WebApplicationFactory<Program>` and send requests through `HttpClient`.
 
-Current API test scope:
+Current scope:
 
 - API host smoke tests;
-- health check endpoint tests;
-- ProblemDetails response tests;
-- OpenAPI and Scalar availability tests;
-- configuration and route-collision validation tests.
+- root endpoint behavior;
+- liveness and readiness endpoint contracts;
+- ProblemDetails responses;
+- OpenAPI and Scalar availability;
+- configuration validation;
+- route-collision validation;
+- feature-toggle behavior.
 
-These tests do not use the database fixture and do not require Docker during a
-normal test run.
+These tests use controlled test configuration and do not require Docker.
 
 ## Persistence tests without Docker
 
-Metadata-based persistence tests verify the production EF Core model without
+Metadata-based tests finalize the production Npgsql EF Core model without
 opening a database connection.
 
 They protect:
 
+- `SpendlyDbContext` registration and `DbSet` shape;
 - strongly typed identifier converters;
 - `Currency` conversion;
 - `Money` complex-property mapping;
 - PostgreSQL column types;
 - enum mappings;
-- explicit constraint and index names;
+- explicit constraint, foreign-key, and index names;
 - restrictive delete behavior;
-- consistency between the current model and migrations.
+- consistency between the current model and migration metadata.
+
+These tests detect mapping drift quickly, but they do not replace real
+PostgreSQL migration and round-trip tests.
 
 ## PostgreSQL database tests
 
-Database integration tests use:
+Database tests use:
 
-- the production `SpendlyDbContext`;
-- production EF Core migrations;
+- production `SpendlyDbContext`;
+- production EF Core configurations;
+- production migrations;
 - Npgsql;
 - PostgreSQL `17.10`;
 - Testcontainers for .NET;
 - an xUnit v3 collection fixture.
 
-`PostgreSqlDatabaseFixture` performs the shared database lifecycle:
+### Shared database fixture
 
-1. starts one temporary PostgreSQL container for the database-test collection;
-2. builds `DbContextOptions<SpendlyDbContext>` from the container connection
-   string;
+`PostgreSqlDatabaseFixture`:
+
+1. starts one temporary PostgreSQL container for the shared database
+   collection;
+2. builds `DbContextOptions<SpendlyDbContext>` from an `NpgsqlDataSource`;
 3. applies production migrations through `MigrateAsync()`;
-4. creates fresh `SpendlyDbContext` instances for tests;
-5. reapplies missing migrations and truncates application tables before every
-   database test while preserving `__EFMigrationsHistory`;
-6. disposes the Npgsql data source and removes the container after the
-   collection finishes.
+4. creates fresh contexts for tests;
+5. reapplies missing migrations and truncates application tables before each
+   shared-fixture test while preserving `__EFMigrationsHistory`;
+6. disposes the data source and removes the container when the collection
+   finishes.
 
-All shared database test classes belong to `PostgreSqlDatabaseCollection`
-and inherit from `DatabaseIntegrationTest`. Tests in this collection are
-serialized so that a shared database reset cannot race with another database
-test.
+All shared database test classes belong to
+`PostgreSqlDatabaseCollection` and inherit from `DatabaseIntegrationTest`.
+The collection is serialized so database reset cannot race with another test.
 
-`InitialDatabaseMigrationTests` additionally verifies:
+### Initial migration tests
+
+`InitialDatabaseMigrationTests` verifies:
 
 - applied and pending migration state;
 - the physical PostgreSQL schema;
-- a real write/read round trip through separate contexts;
+- real wallet, category, and transaction write/read round trips;
+- materialization through a new no-tracking context;
 - restrictive foreign keys;
-- rollback to the empty migration and successful reapplication.
+- rollback to migration `0` and successful reapplication.
 
-`MigrationSmokeTests` intentionally uses a dedicated empty PostgreSQL container
-instead of the shared migrated fixture. The smoke test:
+### Migration smoke test
+
+`MigrationSmokeTests` uses a dedicated empty PostgreSQL container rather than
+the shared migrated fixture.
+
+The smoke test:
 
 1. verifies that the initial `public` schema contains no tables;
-2. reads every migration known to the production `SpendlyDbContext`;
-3. confirms that no migration is already applied;
-4. applies the complete migration pipeline through `MigrateAsync()`;
+2. reads every migration known to the production context;
+3. confirms that none is already applied;
+4. applies the complete migration pipeline with `MigrateAsync()`;
 5. compares known and applied migration identifiers in order;
 6. confirms that no pending migration remains;
-7. compares the complete final table set with the expected schema;
-8. creates a fresh `SpendlyDbContext` and executes queries against every
-   production `DbSet`.
+7. verifies the complete final table set;
+8. opens a fresh context and queries every production `DbSet`.
 
 The smoke test does not use `EnsureCreated()` and does not assume a fixed number
 of migrations.
 
-The PostgreSQL readiness health-check test intentionally uses a separate empty
-container. Its contract requires the health check to leave the schema unchanged,
-so it does not use the migrated database fixture.
+### Readiness test
 
-The accepted storage rules are documented in
-[ADR 0003](../../../docs/adr/0003-define-domain-model-persistence-strategy.md).
+`PostgreSqlReadinessHealthCheckTests` uses a separate empty container. It
+verifies that the production readiness check can reach PostgreSQL without
+creating tables or changing schema state.
 
-## Docker behavior
+## Commands
 
-Database tests and the live PostgreSQL readiness test are explicit xUnit v3
-tests. Therefore, the normal command runs API tests and metadata-based
-persistence tests without requiring Docker:
+Run API and metadata tests without Docker from `backend`:
 
 ```bash
 dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj
 ```
 
-To include Testcontainers tests, run from the `backend` directory with a
-Docker-compatible container engine available:
+Run every integration test, including explicit Docker tests:
 
 ```bash
-dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
-  --settings tests/docker.runsettings
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj --settings tests/docker.runsettings
 ```
 
-When the PostgreSQL fixture cannot start its container, it reports that a
-running and accessible Docker-compatible engine is required and preserves the
-original exception as the inner exception.
+Run explicit PostgreSQL tests except the dedicated migration smoke test:
 
-## Adding a database integration test
+```bash
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj --settings tests/docker.runsettings --filter "Dependency=Docker&FullyQualifiedName!~MigrationSmokeTests"
+```
 
-Create the test class under `Persistence`, attach it to the database collection,
-and inherit from the shared base class:
+Run only the migration smoke test:
+
+```bash
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj --settings tests/docker.runsettings --filter "FullyQualifiedName~MigrationSmokeTests"
+```
+
+A running Docker-compatible engine is required for explicit tests. The Compose
+service in `deploy/docker-compose.yml` does not need to be running because each
+database test owns its temporary container.
+
+If container startup fails, the fixture reports that an accessible
+Docker-compatible engine is required and preserves the original exception as
+the inner exception.
+
+## Adding a shared-fixture database test
+
+Create the test under `Persistence`, attach it to the database collection, and
+inherit from the shared base class:
 
 ```csharp
 [Collection<PostgreSqlDatabaseCollection>]
@@ -137,16 +173,27 @@ public sealed class WalletDatabaseTests(
 }
 ```
 
-Use `Database.CreateDbContext()` so every database test uses the same migrated
-Testcontainer configuration and shared cleanup policy.
+Use `Database.CreateDbContext()` so the test receives the same production
+provider setup, migrated database, and cleanup policy.
+
+Use a dedicated container instead of the shared fixture when the test requires
+an empty database, an intentionally broken migration state, or an independent
+lifecycle.
 
 ## Current limitations
 
 The project does not yet test:
 
-- repositories or Application persistence ports;
-- application persistence handlers;
-- API feature endpoints backed by PostgreSQL;
-- transaction isolation behavior;
+- Application persistence ports or repository implementations;
+- feature handlers backed by PostgreSQL;
+- domain feature HTTP endpoints backed by PostgreSQL;
+- transaction isolation scenarios;
 - optimistic concurrency;
-- database resiliency.
+- retry or resiliency policies.
+
+These tests should be introduced with the corresponding production behavior.
+
+## Related documentation
+
+- [Persistence architecture](../../../docs/architecture/persistence.md)
+- [ADR 0003](../../../docs/adr/0003-define-domain-model-persistence-strategy.md)

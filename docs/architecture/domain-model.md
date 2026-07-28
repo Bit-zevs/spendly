@@ -1,6 +1,6 @@
 # Domain Model
 
-This document describes the domain model implemented in Spendly v0.3.
+This document describes the current Spendly Domain model. The model was introduced in milestone v0.3 and is now persisted by the production Infrastructure layer added in v0.4.
 
 ## Domain model at a glance
 
@@ -14,9 +14,10 @@ The current domain model consists of:
 - strongly typed identifiers for each entity;
 - enums describing wallet, category, and transaction types.
 
-The domain model currently contains business rules only. It is not connected
-to Application use cases, Entity Framework Core, PostgreSQL, or domain HTTP
-endpoints yet.
+The Domain project contains business rules only. It is not connected to
+Application use cases or domain HTTP endpoints yet. The production
+Infrastructure layer maps the same immutable model to PostgreSQL without adding
+EF Core dependencies or attributes to Domain.
 
 ## Purpose of Spendly.Domain
 
@@ -389,7 +390,7 @@ Wallet currently does not contain:
 - ownership by a user;
 - update operations;
 - archive or deletion state;
-- production EF Core mappings;
+- persistence annotations or EF Core configuration inside Domain;
 - API contracts.
 
 A future balance should be derived or updated through defined transaction rules,
@@ -441,7 +442,7 @@ Category currently does not contain:
 - budget limits;
 - ownership by a user;
 - update operations;
-- production EF Core mappings;
+- persistence annotations or EF Core configuration inside Domain;
 - API contracts.
 
 ### Transaction
@@ -547,7 +548,7 @@ Transaction currently does not implement:
 - correction transactions;
 - split transactions;
 - recurring transactions;
-- persistence mapping;
+- persistence annotations or EF Core configuration inside Domain;
 - API contracts.
 
 ## Immutability
@@ -576,7 +577,7 @@ requires them.
 
 ## DateRange decision
 
-A generic `DateRange` value object is intentionally not part of v0.3.
+A generic `DateRange` value object is intentionally not part of the current Domain model.
 
 Current entities contain individual timestamps, but none requires a period.
 
@@ -604,27 +605,21 @@ See
 
 ## Application and persistence status
 
-The v0.3 domain model is not connected to application use cases yet.
+The Domain model is not connected to Application use cases or domain feature
+endpoints yet. There are currently no create-wallet commands, transaction
+handlers, category queries, or Application persistence ports.
 
-There are currently no:
+Production persistence is implemented in `Spendly.Infrastructure`. It maps the
+immutable Domain types to PostgreSQL through `SpendlyDbContext`, explicit EF
+Core configurations, converters, and migrations. No EF Core or database concern
+is added to the Domain project.
 
-- create-wallet commands;
-- transaction handlers;
-- category queries;
-- repositories;
-- production EF Core configurations;
-- database tables;
-- domain API endpoints.
+Repositories remain absent until a concrete Application use case defines the
+smallest required persistence contract. The project does not use a generic CRUD
+repository.
 
-This is intentional. The domain model is implemented and tested before adding
-application orchestration and production persistence. A test-only compatibility
-spike already verifies EF Core and PostgreSQL materialization; its findings are
-documented in
-[EF Core Domain Model Compatibility](ef-core-domain-model-compatibility.md).
-
-The future storage contract is accepted in
+See [Persistence Architecture](persistence.md) and
 [ADR 0003: Define domain model persistence strategy](../adr/0003-define-domain-model-persistence-strategy.md).
-It does not add persistence concerns to the Domain project.
 
 ## Testing
 

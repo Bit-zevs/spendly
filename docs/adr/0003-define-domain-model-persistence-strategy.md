@@ -8,6 +8,23 @@ Accepted
 
 2026-07-14
 
+## Implementation status
+
+Implemented in milestone `v0.4 Persistence Layer`.
+
+The production implementation is located in:
+
+```text
+backend/src/Spendly.Infrastructure/Persistence/
+```
+
+It includes `SpendlyDbContext`, explicit mappings, converters, the
+`InitialCreate` migration, PostgreSQL readiness checking, Testcontainers-based
+database tests, and CI validation for pending model changes.
+
+Repositories remain deferred until Application use cases define focused
+persistence ports.
+
 ## Context
 
 Spendly has an immutable Domain model containing strongly typed identifiers,
@@ -18,13 +35,13 @@ An EF Core compatibility spike proved that Npgsql can persist and materialize
 this model without public setters, persistence attributes, public persistence
 constructors, or navigation properties added only for EF Core.
 
-Before adding the production `SpendlyDbContext`, migrations, and Application use
-cases, the project needs one stable storage contract. Otherwise, individual
-features could choose incompatible column types, enum representations, names,
-delete behavior, or migration policies.
+Before the production persistence layer was added, the project needed one
+stable storage contract. Otherwise, individual features could choose
+incompatible column types, enum representations, names, delete behavior, or
+migration policies.
 
-This ADR defines that contract. It does not create the production persistence
-layer.
+This ADR defined that contract. Its implementation was added later without
+changing the Domain dependency boundary.
 
 ## Decision
 
@@ -206,11 +223,11 @@ Production migrations are applied as an explicit deployment step using a
 reviewed SQL script or EF Core migration bundle. The runtime application
 identity should not require schema-alteration permissions.
 
-When production persistence is introduced:
+The implemented production persistence follows these rules:
 
 - migrations live with Infrastructure unless a separate migrations assembly
   becomes operationally necessary;
-- CI creates a clean PostgreSQL database and applies all migrations;
+- CI applies all migrations to clean PostgreSQL containers;
 - migration tests use `MigrateAsync()`, not `EnsureCreated()`;
 - destructive or data-rewriting migrations require a rollout and rollback plan.
 
@@ -223,10 +240,9 @@ EF Core InMemory and SQLite are not substitutes for PostgreSQL persistence
 verification because they do not exercise the selected PostgreSQL types,
 constraints, SQL generation, or migrations.
 
-The current compatibility spike may continue using `EnsureCreated()` until the
-production context and first migration exist. After that point, production
-mapping tests apply migrations and the temporary compatibility context is
-removed.
+The production database tests apply migrations and exercise the production
+context directly. The earlier test-only compatibility context is no longer the
+active architecture.
 
 The test suite protects at least:
 

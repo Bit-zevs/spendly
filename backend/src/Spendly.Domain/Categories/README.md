@@ -39,7 +39,7 @@ The numeric value `0` is intentionally not assigned to a category type. The cate
 
 Examples of category instances may include groceries, transport, subscriptions, health, entertainment, salary, and savings. These examples are category instances, while `CategoryType` contains only the stable directions `Income` and `Expense`.
 
-## Not included yet
+## Not part of the current Domain model
 
 The current model intentionally does not contain:
 
@@ -49,8 +49,7 @@ The current model intentionally does not contain:
 - budget limits;
 - user ownership;
 - update operations or `UpdatedAt`;
-- persistence mappings;
-- Entity Framework Core attributes;
+- persistence annotations or EF Core configuration inside Domain;
 - API contracts or endpoints.
 
-Persistence details, database mappings, and API contracts must not be placed in the domain model.
+Production mapping exists in `Spendly.Infrastructure`; persistence details and API contracts must not be placed in the Domain model. See [Persistence Architecture](../../../../docs/architecture/persistence.md).
