@@ -2,51 +2,66 @@
 
 ## Purpose
 
-This document records the EF Core compatibility spike for the current Spendly
-Domain model.
+This document records the compatibility work that proved the immutable Spendly
+Domain model could be persisted by EF Core and Npgsql without adding
+persistence concerns to `Spendly.Domain`.
 
-The spike verifies that Entity Framework Core can persist and materialize the
-immutable Domain objects without adding public setters, public persistence
-constructors, navigation properties required only by EF Core, or persistence
-attributes to `Spendly.Domain`.
+The original spike has been completed and promoted into the production
+persistence layer. Current implementation and operational instructions are
+documented in [Persistence Architecture](persistence.md).
 
-The accepted storage contract is defined by
-[ADR 0003: Define domain model persistence strategy](../adr/0003-define-domain-model-persistence-strategy.md).
-This document describes the evidence behind that decision and the temporary
-test implementation that protects it.
+## Outcome
 
-Production persistence remains outside the scope of the spike. The temporary
-`DbContext` and mappings live only in `Spendly.IntegrationTests`.
+The compatibility result is successful.
 
-## Tested setup
+EF Core and PostgreSQL can persist and materialize the current Domain model
+without:
 
-The repository currently verifies the model with:
+- public setters;
+- public entity constructors for persistence;
+- EF Core attributes in Domain;
+- navigation properties added only for mapping;
+- calling public Domain factories during materialization;
+- custom value comparers for the current immutable converted values.
 
-- .NET SDK `10.0.301`;
-- Entity Framework Core `10.0.9`;
-- Npgsql Entity Framework Core provider `10.0.3`;
+## Production promotion
+
+The validated mapping now lives in:
+
+```text
+backend/src/Spendly.Infrastructure/Persistence/
+```
+
+Production components include:
+
+- `SpendlyDbContext`;
+- `WalletConfiguration`;
+- `CategoryConfiguration`;
+- `TransactionConfiguration`;
+- reusable `Currency` and `Money` mapping extensions;
+- converters for strongly typed identifiers, currencies, and enums;
+- the `InitialCreate` migration;
+- PostgreSQL database integration tests.
+
+The temporary test-only compatibility context described by the original spike
+no longer represents the repository architecture. Tests now exercise the
+production context and mappings directly.
+
+## Verified setup
+
+The repository pins the tested toolchain in source-controlled configuration:
+
+- .NET SDK `10.0.301` in `global.json`;
+- EF Core `10.0.10` in `backend/Directory.Packages.props`;
+- Npgsql EF Core provider `10.0.3`;
 - Testcontainers for PostgreSQL `4.13.0`;
 - PostgreSQL image `postgres:17.10`;
 - xUnit v3.
 
-## Result
+These values describe the current repository state. Package and image upgrades
+must update code, tests, and documentation together.
 
-The current Domain model is compatible with EF Core and PostgreSQL.
-
-The model does not require:
-
-- public setters;
-- public or protected parameterless constructors on entities;
-- EF Core attributes in the Domain project;
-- persistence calls to public Domain factories;
-- navigation properties solely for defining foreign keys.
-
-The real PostgreSQL round-trip test saves a wallet, income and expense
-categories, and income and expense transactions. It disposes the write context,
-opens a new context, reads all objects with `AsNoTracking()`, and compares the
-materialized state with the original Domain state.
-
-## Approved mapping demonstrated by the spike
+## Approved mapping
 
 | Domain element | PostgreSQL and EF Core mapping |
 | --- | --- |
@@ -57,46 +72,43 @@ materialized state with the original Domain state.
 | `WalletType`, `CategoryType`, `TransactionType` | Explicit enum-to-`short` converter and PostgreSQL `smallint` |
 | required timestamps | PostgreSQL `timestamp with time zone` with UTC Domain values |
 | `Transaction.UpdatedAt` | Nullable PostgreSQL `timestamp with time zone` |
-| relationships | Required foreign keys with `DeleteBehavior.Restrict` and explicit constraint names |
+| relationships | Required foreign keys with `DeleteBehavior.Restrict` and explicit names |
 | transaction indexes | Explicit indexes for `wallet_id`, `category_id`, and `occurred_at` |
 | database checks | Currency format, valid enum codes, and positive transaction amount |
 
-The test mappings intentionally use explicit physical names and types. They are
-an executable specification for the future Infrastructure mappings, not a
-production persistence layer.
+The accepted contract is defined by
+[ADR 0003](../adr/0003-define-domain-model-persistence-strategy.md).
 
-## Value converters and comparers
+## Materialization paths
 
-The compatibility mapping uses converters for:
+`Wallet` and `Category` are materialized through private constructors selected
+by EF Core.
+
+`Transaction` uses private persistence state and backing-field access. Its
+`Money` value is mapped as a required complex property.
+
+`Money` keeps a private parameterless constructor for persistence
+materialization. Normal application code must continue to use `Money.From`,
+`Money.Positive`, or `Money.Zero`, so Domain creation rules remain enforced.
+
+## Converter and comparer result
+
+Converters are required for:
 
 - every strongly typed identifier;
 - `Currency`;
 - persisted enums converted to `short`.
 
-No custom value comparers are configured.
+Custom comparers are not required for the current mappings. Strongly typed IDs
+are immutable record structs, and `Currency` is immutable with value equality.
+EF Core can use their normal equality and snapshot behavior.
 
-The strongly typed identifiers are immutable `readonly record struct` values.
-`Currency` is immutable and implements value equality. Their normal equality
-and snapshot behavior is sufficient for the current model. A comparer should be
-introduced only when a future mapped type needs custom equality, hashing, or a
-deep snapshot.
+A custom comparer should be introduced only when a future mapped type requires
+custom equality, hashing, or deep snapshots.
 
-## Domain materialization paths
+## Money result
 
-`Wallet` and `Category` are materialized through their existing private
-parameterized constructors.
-
-`Transaction` uses a private scalar persistence constructor. The `Money`
-complex property is restored separately through explicit backing-field mapping.
-
-`Money` keeps a private parameterless constructor exclusively for persistence
-materialization. Application code must still use `Money.From`,
-`Money.Positive`, or `Money.Zero`, so normal Domain creation cannot bypass its
-invariants.
-
-## Money policy
-
-The Domain and compatibility mapping share one policy:
+Domain and database share:
 
 ```text
 precision: 19
@@ -104,29 +116,26 @@ scale: 4
 maximum: 999999999999999.9999
 ```
 
-The Domain rejects values that exceed the maximum or contain more than four
-fractional digits. The database stores the exact decimal value as
-`numeric(19,4)` and never passes through `float` or `double`.
+PostgreSQL stores exact values as `numeric(19,4)`. The persistence path remains
+`decimal` and does not pass through `float` or `double`.
 
-A transaction amount also has the database check `amount > 0`, matching the
-current `Transaction.Create` contract.
+The `transactions` table also enforces `amount > 0`.
 
-## Transaction currency invariant
+## Cross-table currency rule
 
-`Transaction.Create` receives the complete `Wallet`, verifies that
-`Money.Currency` equals `Wallet.Currency`, and then stores only `WalletId`.
+`Transaction.Create` verifies that the transaction amount currency equals the
+wallet currency and then stores only the wallet identifier.
 
-The compatibility mapping persists the transaction currency as part of
-`Money`. The accepted strategy keeps the cross-table currency rule in Domain and
-Application logic. A normal PostgreSQL row check cannot compare the transaction
-currency with the referenced wallet currency.
+The database stores the transaction currency as part of `Money`, but a normal
+row check cannot compare it with a referenced wallet row. The rule therefore
+remains a Domain and Application responsibility.
 
-Introducing a trigger or a denormalized compound foreign key for this rule
-requires a separate decision backed by a real use case.
+A trigger or denormalized compound foreign key would require a separate ADR and
+a demonstrated need.
 
-## Naming and integrity checks
+## Naming and integrity result
 
-The temporary model demonstrates the accepted lowercase `snake_case` strategy:
+The production model uses explicit lowercase `snake_case` names, including:
 
 ```text
 wallets
@@ -138,7 +147,7 @@ occurred_at
 updated_at
 ```
 
-It also verifies explicit names such as:
+Representative database object names include:
 
 ```text
 pk_transactions
@@ -147,66 +156,52 @@ ck_transactions_amount_positive
 ix_transactions_wallet_id
 ```
 
-The following checks are represented in the compatibility model:
+The model verifies:
 
-- wallet currency codes contain exactly three uppercase ASCII letters;
-- wallet types contain only defined numeric codes;
-- category types contain only defined numeric codes;
-- transaction types contain only defined numeric codes;
-- transaction amounts are positive;
-- transaction currency codes contain exactly three uppercase ASCII letters.
+- exactly three uppercase ASCII letters for currency codes;
+- only defined wallet, category, and transaction numeric codes;
+- positive transaction amounts;
+- restrictive transaction foreign keys;
+- explicit physical column types and names.
 
-## Explicit Docker test
+## Current test evidence
 
-The real PostgreSQL round-trip is marked as an explicit xUnit v3 test. Normal
-local integration-test execution does not require Docker.
+Metadata tests inspect the finalized production Npgsql model without opening a
+database connection.
 
-Run fast integration tests:
+Explicit Testcontainers tests use the production context and migrations to
+verify:
+
+- migration application to an empty PostgreSQL database;
+- physical schema shape;
+- write/read materialization through separate contexts;
+- strongly typed IDs and value objects;
+- foreign-key restrictions;
+- migration rollback and reapplication;
+- queryability of every production `DbSet`;
+- readiness without schema mutation.
+
+Run the default integration tests:
 
 ```bash
+cd backend
 dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj
 ```
 
-Run all integration tests, including Testcontainers:
+Run explicit PostgreSQL tests:
 
 ```bash
-dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
-  --settings tests/docker.runsettings
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj --settings tests/docker.runsettings
 ```
 
-CI uses the second command.
+## Remaining boundaries
 
-The model-strategy tests do not open a database connection. They inspect the
-finalized Npgsql EF Core model and protect column types, converters, constraints,
-index names, and delete behavior during normal test execution.
+Compatibility and production persistence do not add:
 
-## Production persistence requirements
+- Application use cases;
+- repositories or Application persistence ports;
+- wallet, category, or transaction HTTP endpoints;
+- automatic startup migrations;
+- cross-table database enforcement of transaction and wallet currency equality.
 
-The next persistence stage should:
-
-1. create the real `SpendlyDbContext` in `Spendly.Infrastructure`;
-2. move equivalent final mappings out of the test project;
-3. add the first migration;
-4. validate migrations against PostgreSQL Testcontainers with `MigrateAsync()`;
-5. add connection-string validation and a PostgreSQL readiness health check;
-6. create persistence ports only with real Application use cases;
-7. keep all EF Core-specific code outside `Spendly.Domain`;
-8. remove the temporary compatibility context after production mappings have
-   equivalent model and round-trip coverage.
-
-The production API and Worker must not apply migrations automatically during
-startup. Migrations belong to an explicit deployment step, as defined by ADR
-0003.
-
-## Out of scope
-
-This spike does not add:
-
-- a production `SpendlyDbContext`;
-- production entity configurations;
-- migrations;
-- repositories;
-- application persistence interfaces;
-- API connection strings;
-- database health checks;
-- transactional application use cases.
+Those concerns require separate use-case or architecture decisions.

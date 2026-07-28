@@ -8,6 +8,12 @@ Accepted
 
 2026-07-12
 
+## Implementation status
+
+The decision remains active. The current Domain model still has no reusable
+date-range or period value object because no implemented use case has defined
+its semantics.
+
 ## Context
 
 Spendly may eventually need a date range for:
@@ -18,8 +24,8 @@ Spendly may eventually need a date range for:
 - subscription periods;
 - transaction filters.
 
-The v0.3 domain model currently contains Wallet, Category, Transaction, Money,
-and Currency.
+At the time of this decision, the v0.3 Domain model contained Wallet, Category,
+Transaction, Money, and Currency.
 
 None of these implemented types requires a reusable date interval.
 
@@ -38,7 +44,8 @@ The unresolved semantics include:
 
 ## Decision
 
-Do not add a generic `DateRange` value object in v0.3.
+Do not add a generic `DateRange` value object without a concrete consumer and
+defined boundary semantics.
 
 Reconsider the type when the first implemented domain use case requires a date
 interval.
@@ -78,7 +85,7 @@ depends on it.
 
 Positive consequences:
 
-- the v0.3 domain model remains focused on current business requirements;
+- the Domain model remains focused on current business requirements;
 - no unused production abstraction is introduced;
 - future semantics can be defined from a real feature;
 - budgets, reports, goals, and subscriptions remain free to use different
@@ -113,7 +120,7 @@ At that point, first decide whether the correct concept is:
 
 ## Alternatives considered
 
-### Add DateRange in v0.3
+### Add DateRange before a real use case
 
 Rejected because the type would have no current consumer and its semantics would
 be speculative.

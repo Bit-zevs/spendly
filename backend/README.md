@@ -1,347 +1,307 @@
-# Spendly
+# Spendly Backend
 
-Spendly is a personal finance assistant for tracking expenses, managing budgets,
-monitoring subscriptions, planning financial goals, and calculating daily safe
-spending.
+This directory contains the complete Spendly backend solution.
 
-The main product goal is to help a user answer:
-
-> How much money can I safely spend today without breaking my monthly budget?
-
-## Project status
-
-The current repository milestone is:
+## Current milestone
 
 ```text
-v0.3 Domain Model
+v0.4 Persistence Layer
 ```
 
-The backend foundation introduced in v0.2 remains in place, including:
+The current backend includes:
 
-- ASP.NET Core API hosting;
-- strongly typed configuration;
-- Serilog logging;
-- centralized ProblemDetails error responses;
-- OpenAPI document generation;
-- Scalar API documentation;
-- liveness and readiness health checks;
-- unit and integration test projects;
-- backend CI through GitHub Actions.
+- ASP.NET Core API and Worker hosts;
+- validated strongly typed configuration;
+- Serilog request and application logging;
+- centralized ProblemDetails responses;
+- OpenAPI and Scalar documentation;
+- liveness and PostgreSQL-backed readiness endpoints;
+- the initial Domain model for wallets, categories, transactions, currencies,
+  and money;
+- production EF Core persistence for PostgreSQL;
+- the `InitialCreate` migration;
+- unit, API integration, EF Core metadata, PostgreSQL round-trip, migration, and
+  readiness tests;
+- GitHub Actions CI for restore, formatting, build, migration-model validation,
+  dependency reporting, and tests.
 
-Version v0.3 adds the first implemented domain model:
+Application use cases and feature endpoints are the next architectural layer.
+They are intentionally not invented before their real contracts are known.
 
-- reusable entity and value object abstractions;
-- strongly typed identifiers;
-- domain errors and domain exceptions;
-- `Currency`;
-- `Money`;
-- `Wallet`;
-- `Category`;
-- `Transaction`;
-- domain unit tests.
-
-The current milestone models business rules only. Wallet, category, and
-transaction use cases are not exposed through HTTP endpoints yet.
-
-## Current implementation boundaries
-
-The following functionality is intentionally not implemented yet:
-
-- user registration and authentication;
-- wallet, category, and transaction API endpoints;
-- application commands and queries;
-- repository interfaces and implementations;
-- Entity Framework Core;
-- `DbContext`;
-- database migrations;
-- PostgreSQL connectivity;
-- persistent wallet balances;
-- budgets;
-- reports;
-- subscriptions;
-- financial goals;
-- recurring transactions.
-
-A PostgreSQL Docker Compose configuration exists as preparation for a future
-persistence milestone, but the current API does not connect to it.
-
-## DateRange decision
-
-`DateRange` is not included in v0.3.
-
-None of the current domain entities requires a date interval, and the correct
-semantics of a reusable range are not known yet. Important unresolved questions
-include:
-
-- whether the range should use `DateOnly` or `DateTimeOffset`;
-- whether both boundaries should be inclusive;
-- whether an open-ended range should be allowed;
-- whether budgets, reports, goals, and subscriptions require the same type;
-- which operations such as `Contains` and `Overlaps` are actually needed.
-
-The value object will be reconsidered when the first real use case requiring a
-date range is implemented.
-
-The complete decision is recorded in
-[ADR 0002](docs/adr/0002-defer-date-range-until-required.md).
-
-## Planned product features
-
-- User accounts
-- Wallets
-- Income and expense tracking
-- Categories
-- Monthly budgets
-- Daily safe spend calculation
-- Subscriptions
-- Financial goals
-- Analytics
-- Telegram bot
-- Web application
-- Mobile application later
-
-## Repository structure
+## Solution structure
 
 ```text
-spendly/
-├── .config/
-│   └── dotnet-tools.json
-├── backend/
-│   ├── src/
-│   │   ├── Spendly.Api/
-│   │   ├── Spendly.Application/
-│   │   ├── Spendly.Domain/
-│   │   ├── Spendly.Infrastructure/
-│   │   └── Spendly.Worker/
-│   ├── tests/
-│   │   ├── Spendly.UnitTests/
-│   │   └── Spendly.IntegrationTests/
-│   └── Spendly.sln
-├── deploy/
-│   └── docker-compose.yml
-├── docs/
-│   ├── adr/
-│   ├── architecture/
-│   └── product/
-├── global.json
-└── README.md
+backend/
+├── src/
+│   ├── Spendly.Api/
+│   ├── Spendly.Application/
+│   ├── Spendly.Domain/
+│   ├── Spendly.Infrastructure/
+│   └── Spendly.Worker/
+├── tests/
+│   ├── Spendly.IntegrationTests/
+│   └── Spendly.UnitTests/
+├── Directory.Build.props
+├── Directory.Packages.props
+├── README.md
+└── Spendly.sln
 ```
 
-## Backend architecture
+## Projects
 
-Spendly currently uses a modular monolith with Clean Architecture Lite.
+### Spendly.Domain
 
-The dependency direction is:
+Contains business concepts and invariants:
+
+- `Entity<TId>` and `ValueObject` foundations;
+- strongly typed identifiers backed by UUID version 7 values;
+- domain errors and exceptions;
+- `Currency` and `Money`;
+- `Wallet`, `Category`, and `Transaction`.
+
+The project remains independent from ASP.NET Core, EF Core, Npgsql, SQL,
+serialization, and infrastructure concerns. Persistence is configured entirely
+from `Spendly.Infrastructure`.
+
+See:
+
+- [Domain project documentation](src/Spendly.Domain/README.md)
+- [Complete domain model](../docs/architecture/domain-model.md)
+
+### Spendly.Application
+
+Reserved for application use cases and ports.
+
+Expected responsibilities include:
+
+- commands, queries, and handlers;
+- use-case orchestration;
+- request-independent validation;
+- authorization decisions;
+- domain-specific persistence ports;
+- infrastructure-independent DTOs and projections.
+
+The project currently references `Spendly.Domain`, but no production use cases
+have been implemented yet.
+
+### Spendly.Infrastructure
+
+Contains production technical implementations:
+
+- `SpendlyDbContext`;
+- EF Core entity configurations;
+- converters for strongly typed identifiers, currencies, and enums;
+- `Money` complex-property mapping;
+- PostgreSQL connection options and startup validation;
+- shared `NpgsqlDataSource` registration;
+- the PostgreSQL readiness health check;
+- EF Core migrations.
+
+Future infrastructure implementations may include domain-specific repository
+ports, external clients, messaging, caching, file storage, and clocks.
+
+### Spendly.Api
+
+Hosts the HTTP application and currently provides:
+
+- startup and dependency registration;
+- Serilog configuration and request logging;
+- centralized exception handling;
+- ProblemDetails responses;
+- root status endpoint;
+- liveness and readiness endpoints;
+- OpenAPI generation;
+- Scalar UI.
+
+The API contains no wallet, category, transaction, authentication, budget, or
+reporting endpoints yet. Future endpoints must call Application use cases
+instead of implementing business rules directly.
+
+### Spendly.Worker
+
+Hosts background processing. It currently starts and waits for shutdown without
+executing scheduled financial jobs.
+
+Future jobs must call Application use cases. Business rules remain in Domain.
+
+### Spendly.UnitTests
+
+Contains deterministic tests for Domain and future Application behavior. Unit
+tests do not start the API, PostgreSQL, Docker, or external services.
+
+### Spendly.IntegrationTests
+
+Contains:
+
+- in-memory API host tests;
+- EF Core metadata tests that do not require Docker;
+- explicit PostgreSQL Testcontainers tests;
+- production migration and schema tests;
+- persistence round-trip tests;
+- PostgreSQL readiness tests.
+
+See [integration-test documentation](tests/Spendly.IntegrationTests/README.md).
+
+## Dependency rules
+
+Allowed project references:
 
 ```text
-Spendly.Domain
-      ↑
-Spendly.Application
-      ↑
-Spendly.Infrastructure
-      ↑
-Spendly.Api / Spendly.Worker
+Application     -> Domain
+Infrastructure  -> Application, Domain
+Api             -> Application, Infrastructure
+Worker          -> Application, Infrastructure
 ```
 
-The actual project references are:
+Forbidden dependency directions include:
 
 ```text
-Spendly.Domain
-  └── no project dependencies
-
-Spendly.Application
-  └── Spendly.Domain
-
-Spendly.Infrastructure
-  ├── Spendly.Application
-  └── Spendly.Domain
-
-Spendly.Api
-  ├── Spendly.Application
-  └── Spendly.Infrastructure
-
-Spendly.Worker
-  ├── Spendly.Application
-  └── Spendly.Infrastructure
+Domain          -> Application, Infrastructure, Api, Worker
+Application     -> Infrastructure implementation details, Api, Worker
 ```
 
-The Domain project is the innermost layer. Business rules must not depend on
-ASP.NET Core, HTTP, Entity Framework Core, PostgreSQL, background workers, or
-other delivery and persistence mechanisms.
+Inner layers define business rules and application contracts. Outer layers
+provide transport and technical implementations.
 
-More information:
+## Build configuration
 
-- [Documentation index](docs/README.md)
-- [Architecture overview](docs/architecture/overview.md)
-- [Domain model](docs/architecture/domain-model.md)
-- [Backend guide](backend/README.md)
+`Directory.Build.props` applies common settings:
 
-## Technology stack
+- target framework `net10.0`;
+- nullable reference types;
+- implicit global usings;
+- latest configured analysis level;
+- code-style enforcement during build;
+- warnings as errors when `ContinuousIntegrationBuild=true`.
 
-Currently used:
+`Directory.Packages.props` enables Central Package Management. Project files
+normally declare package names without repeating versions.
 
-- C#
-- .NET 10
-- ASP.NET Core
-- Serilog
-- OpenAPI
-- Scalar
-- xUnit v3
-- GitHub Actions
-- repository-local .NET tools
-- centralized NuGet package version management
-
-Prepared for future milestones:
-
-- PostgreSQL
-- Entity Framework Core
-- Docker-based local infrastructure
-
-## Requirements
-
-Required:
-
-- .NET 10 SDK
-
-Optional:
-
-- Docker Desktop;
-- JetBrains Rider;
-- Visual Studio;
-- another C# IDE with .NET 10 support.
-
-The SDK version is pinned in:
+The repository-local EF Core CLI is pinned in:
 
 ```text
-global.json
+../.config/dotnet-tools.json
 ```
 
-Shared build settings are stored in:
+## Restore and build
 
-```text
-backend/Directory.Build.props
-```
+Run commands from this `backend` directory unless a section says otherwise.
 
-Centralized NuGet package versions are stored in:
-
-```text
-backend/Directory.Packages.props
-```
-
-Repository-local .NET tools are pinned in:
-
-```text
-.config/dotnet-tools.json
-```
-
-## Restore local .NET tools
-
-From the repository root:
+Restore repository-local tools:
 
 ```bash
 dotnet tool restore
 ```
 
-This restores the exact `dotnet-ef` version declared by the repository. A
-global installation of `dotnet-ef` is not required.
-
-Verify the restored tool:
+Verify the EF Core CLI:
 
 ```bash
 dotnet tool list --local
 dotnet ef --version
 ```
 
-## Restore backend dependencies
-
-From the repository root:
+Restore and build the solution:
 
 ```bash
-cd backend
 dotnet restore Spendly.sln
-```
-
-## Build the backend
-
-From the `backend` directory:
-
-```bash
 dotnet build Spendly.sln
 ```
 
-The command builds:
-
-- `Spendly.Api`;
-- `Spendly.Application`;
-- `Spendly.Domain`;
-- `Spendly.Infrastructure`;
-- `Spendly.Worker`;
-- `Spendly.UnitTests`;
-- `Spendly.IntegrationTests`.
-
-## Run tests
-
-From the `backend` directory:
+Run the default test suite without Docker:
 
 ```bash
 dotnet test Spendly.sln
 ```
 
-The test projects are:
+## Local PostgreSQL
 
-```text
-tests/Spendly.UnitTests
-tests/Spendly.IntegrationTests
-```
-
-Unit tests verify domain behavior in isolation.
-
-Integration tests include two groups:
-
-- API and model-shape tests that do not require external services;
-- an explicit EF Core compatibility test that uses PostgreSQL Testcontainers.
-
-A normal `dotnet test Spendly.sln` run does not execute explicit tests and does
-not require Docker. To include the PostgreSQL round-trip, run:
+Start PostgreSQL from the repository root:
 
 ```bash
-dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
-  --settings tests/docker.runsettings
+cd ..
+docker compose -f deploy/docker-compose.yml up -d
+cd backend
 ```
 
-## Run the API locally
+The default local container configuration is:
 
-From the `backend` directory:
+```text
+Host: localhost
+Port: 5432
+Database: spendly
+Username: spendly
+Password: spendly_password
+```
+
+These credentials are local development defaults only.
+
+See [local infrastructure documentation](../deploy/README.md) for environment
+overrides, logs, health, shutdown, and volume removal.
+
+## Configure the API connection string
+
+The required configuration key is:
+
+```text
+ConnectionStrings:SpendlyDatabase
+```
+
+It is mapped to `PostgreSqlOptions` and validated at startup. Startup fails when
+the connection string is missing, malformed, or does not define `Host`,
+`Database`, and `Username`.
+
+### .NET User Secrets
+
+Store the local value without changing tracked configuration files:
+
+```bash
+dotnet user-secrets set "ConnectionStrings:SpendlyDatabase" "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password" --project src/Spendly.Api/Spendly.Api.csproj
+```
+
+Inspect or remove the local value:
+
+```bash
+dotnet user-secrets list --project src/Spendly.Api/Spendly.Api.csproj
+dotnet user-secrets remove "ConnectionStrings:SpendlyDatabase" --project src/Spendly.Api/Spendly.Api.csproj
+```
+
+### Environment variable
+
+.NET maps a double underscore to a configuration colon:
+
+```text
+ConnectionStrings__SpendlyDatabase
+```
+
+PowerShell:
+
+```powershell
+$env:ConnectionStrings__SpendlyDatabase = "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
+
+Bash:
+
+```bash
+export ConnectionStrings__SpendlyDatabase="Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
+
+`deploy/.env` configures the PostgreSQL Compose container. It is not loaded by a
+locally started .NET process and does not replace the API connection string.
+
+## Run the API
 
 ```bash
 dotnet run --project src/Spendly.Api/Spendly.Api.csproj --launch-profile https
 ```
 
-Local URLs:
+Default development URLs:
 
 ```text
 https://localhost:7037
 http://localhost:5294
 ```
 
-Root status endpoint:
-
-```text
-GET https://localhost:7037/
-```
-
-Example response:
-
-```json
-{
-  "application": "Spendly API",
-  "status": "Running"
-}
-```
-
-## Current API surface
-
-The API currently exposes backend foundation endpoints only:
+Current API surface:
 
 ```text
 GET /
@@ -351,158 +311,299 @@ GET /openapi/{documentName}.json
 GET /docs
 ```
 
-There are no wallet, category, transaction, budget, authentication, or
-reporting endpoints yet.
+The configured OpenAPI document name is currently `v0.2`. The repository
+milestone and the HTTP document name are separate versioning concepts, and the
+persistence milestone does not introduce a new feature API contract.
 
-The repository milestone version and the API document version are separate
-concepts. The API configuration currently keeps the document name `v0.2`
-because the v0.3 work adds a domain model without changing the HTTP contract.
-
-In the Development environment:
+Development documentation endpoints:
 
 ```text
-https://localhost:7037/docs
 https://localhost:7037/openapi/v0.2.json
+https://localhost:7037/docs
 ```
 
-OpenAPI and Scalar are disabled outside Development unless the configuration
-and environment rules are changed intentionally.
+OpenAPI and Scalar are disabled outside Development by the current
+configuration.
 
 ## Health checks
 
-`/health/live` verifies only that the API process can respond and does not
-run dependency checks.
+`GET /health/live` verifies that the API process can serve HTTP requests. It
+does not execute dependency checks.
 
-`/health/ready` runs both the application self-check and a PostgreSQL readiness
-check. The PostgreSQL check opens a connection, executes `SELECT 1`, and has a
-five-second timeout.
+`GET /health/ready` executes all checks tagged `ready`:
 
-When PostgreSQL is available, readiness returns `200 OK` with `Healthy`. When
-PostgreSQL is unavailable, readiness returns `503 Service Unavailable` with
-`Unhealthy`, while liveness remains `200 OK`.
+- the application self-check;
+- the PostgreSQL check registered by Infrastructure.
 
-The response contains only safe descriptions. The connection string, password,
-and Npgsql exception details are not included. The check does not create or
-modify the database schema and never applies migrations.
+The PostgreSQL check opens a connection through the shared `NpgsqlDataSource`,
+executes `SELECT 1`, and uses a five-second timeout.
 
-## Error handling
+Readiness returns:
 
-The API uses ASP.NET Core ProblemDetails as its standard HTTP error format.
+- `200 OK` when the application and PostgreSQL are healthy;
+- `503 Service Unavailable` when PostgreSQL is unavailable.
 
-A typical error response contains:
+The check does not create tables, call `EnsureCreated`, apply migrations, or
+modify the schema. Responses do not expose connection strings, passwords, or
+provider exception details.
 
-```json
-{
-  "type": "about:blank",
-  "title": "Not Found",
-  "status": 404,
-  "detail": "The requested resource was not found.",
-  "instance": "/unknown",
-  "code": "not_found",
-  "traceId": "..."
-}
-```
-
-Unhandled exceptions are logged through Serilog and converted to safe
-`500 Internal Server Error` responses without exposing stack traces or internal
-implementation details to clients.
-
-Domain errors are currently used inside the domain model. Mapping domain errors
-to HTTP responses will be introduced together with application use cases and
-domain API endpoints.
-
-## PostgreSQL configuration and database status
-
-The API requires a PostgreSQL connection string named:
-
-```text
-ConnectionStrings:SpendlyDatabase
-```
-
-The connection string is mapped to strongly typed `PostgreSqlOptions` and
-validated during application startup. Startup fails when the value is missing,
-malformed, or does not define `Host`, `Database`, and `Username`.
-
-For local development, start PostgreSQL from the repository root:
+Example commands:
 
 ```bash
-docker compose -f deploy/docker-compose.yml up -d
+curl --insecure https://localhost:7037/health/live
+curl --insecure https://localhost:7037/health/ready
 ```
 
-Then store the local connection string through .NET User Secrets from the
-`backend` directory:
+## Production persistence layout
 
-```bash
-dotnet user-secrets set \
-  "ConnectionStrings:SpendlyDatabase" \
-  "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password" \
-  --project src/Spendly.Api/Spendly.Api.csproj
-```
-
-On PowerShell:
-
-```powershell
-dotnet user-secrets set `
-  "ConnectionStrings:SpendlyDatabase" `
-  "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password" `
-  --project src/Spendly.Api/Spendly.Api.csproj
-```
-
-The same configuration can be supplied through an environment variable:
+The production context is:
 
 ```text
-ConnectionStrings__SpendlyDatabase
+src/Spendly.Infrastructure/Persistence/SpendlyDbContext.cs
 ```
 
-For example, in PowerShell:
+Entity configurations are discovered from the Infrastructure assembly through
+`ApplyConfigurationsFromAssembly` and live in:
+
+```text
+src/Spendly.Infrastructure/Persistence/Configuration/
+```
+
+Converters live in:
+
+```text
+src/Spendly.Infrastructure/Persistence/Converters/
+```
+
+Migrations live in:
+
+```text
+src/Spendly.Infrastructure/Persistence/Migrations/
+```
+
+The current context exposes:
+
+```text
+DbSet<Wallet> Wallets
+DbSet<Category> Categories
+DbSet<Transaction> Transactions
+```
+
+Complete storage rules are documented in
+[Persistence Architecture](../docs/architecture/persistence.md).
+
+## Database representation
+
+The initial migration creates:
+
+```text
+wallets
+categories
+transactions
+```
+
+Important mappings:
+
+- strongly typed IDs -> `uuid` with `ValueGeneratedNever()`;
+- `Currency` -> `character varying(3)`;
+- `Money.Amount` -> `numeric(19,4)`;
+- `Money.Currency` -> `currency_code`;
+- persisted enums -> `smallint` with check constraints;
+- `DateTimeOffset` instants -> `timestamp with time zone`;
+- transaction foreign keys -> `ON DELETE RESTRICT`;
+- physical identifiers -> explicit lowercase `snake_case`.
+
+## Migration workflow
+
+The API and Worker never apply migrations automatically. Schema changes are an
+explicit development or deployment action.
+
+### Create a migration
+
+Choose a descriptive PascalCase name and run:
+
+```bash
+dotnet ef migrations add MigrationName --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext --output-dir Persistence/Migrations
+```
+
+Review all generated files before committing:
+
+- migration `Up` and `Down` operations;
+- generated PostgreSQL column types;
+- constraints, foreign keys, and indexes;
+- data-loss warnings;
+- `SpendlyDbContextModelSnapshot` changes.
+
+Check that the model and snapshot agree:
+
+```bash
+dotnet ef migrations has-pending-model-changes --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext
+```
+
+### Apply migrations
+
+The design-time factory configures the Npgsql provider without embedding a
+connection string. Supply the target connection explicitly.
+
+```bash
+dotnet ef database update --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext --connection "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
+
+Using the environment variable in PowerShell:
 
 ```powershell
-$env:ConnectionStrings__SpendlyDatabase = "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+dotnet ef database update --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext --connection $env:ConnectionStrings__SpendlyDatabase
 ```
 
-The credentials above are isolated local-development defaults from the Docker
-Compose configuration. They must not be reused in production, staging, shared
-testing environments, or publicly reachable database instances.
+Using the environment variable in Bash:
 
-Production Entity Framework Core persistence is still not configured. The
-project currently has:
+```bash
+dotnet ef database update --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext --connection "$ConnectionStrings__SpendlyDatabase"
+```
 
-- no production `DbContext`;
-- no production entity configurations;
-- no repositories;
-- no migrations;
-- no database readiness health check.
+List known migrations:
 
-The API validates and stores the connection configuration, but does not open a
-database connection yet.
+```bash
+dotnet ef migrations list --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext --connection "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
 
-A test-only EF Core compatibility context and PostgreSQL Testcontainers test
-verify that the immutable Domain model can be materialized by the real Npgsql
-provider. The storage contract is accepted in
-[ADR 0003](../docs/adr/0003-define-domain-model-persistence-strategy.md), while
-the production context and migrations remain intentionally deferred.
+### Roll back the database
+
+Update the database to the previous migration identifier:
+
+```bash
+dotnet ef database update PreviousMigrationName --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext --connection "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
+
+To roll back every migration in a disposable local database, target `0`:
+
+```bash
+dotnet ef database update 0 --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext --connection "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
+
+Rollback commands execute migration `Down` operations and may destroy data.
+Production rollback requires a reviewed data and rollout plan.
+
+### Remove an unshared migration
+
+After rolling the database back, remove only the latest migration that has not
+been shared or deployed:
+
+```bash
+dotnet ef migrations remove --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext
+```
+
+Do not rewrite an already shared migration. Add a new corrective migration so
+every environment retains the same ordered history.
+
+### Generate a deployment script
+
+```bash
+dotnet ef migrations script --idempotent --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext --output spendly-migrations.sql
+```
+
+Review generated SQL before applying it outside an isolated local environment.
+The runtime application identity should not require schema-alteration
+permissions.
+
+## Why startup migrations are disabled
+
+`Program.cs` registers Infrastructure and starts the application. It does not
+call `Database.Migrate()` or `Database.MigrateAsync()`.
+
+This keeps schema deployment explicit and prevents:
+
+- several API replicas racing to update the same schema;
+- application startup from becoming an uncontrolled deployment operation;
+- runtime identities from requiring DDL permissions;
+- an unreviewed destructive migration from being applied automatically;
+- health checks or restarts from changing database state.
+
+Database integration tests call `MigrateAsync()` because applying migrations is
+the behavior under test. That does not change the production startup policy.
+
+## Why repositories are not implemented yet
+
+Persistence exists, but Application use cases do not.
+
+A repository contract should describe the smallest operation needed by a real
+use case, for example saving a wallet or loading transactions for a period. It
+should not be created merely because a table exists.
+
+The project also rejects a generic CRUD repository such as
+`IGenericRepository<TEntity>` because it would duplicate `DbSet` behavior,
+hide use-case intent, and encourage uniform CRUD access where domain entities
+have different rules and query needs.
+
+When a use case is implemented:
+
+1. Application defines a domain-specific port;
+2. Infrastructure implements it with EF Core;
+3. tests protect both the use-case contract and PostgreSQL behavior.
+
+## Tests
+
+Run unit, API, and metadata-based persistence tests without Docker:
+
+```bash
+dotnet test Spendly.sln
+```
+
+Run every integration test, including explicit Testcontainers tests:
+
+```bash
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj --settings tests/docker.runsettings
+```
+
+Run explicit PostgreSQL tests except the dedicated migration smoke test:
+
+```bash
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj --settings tests/docker.runsettings --filter "Dependency=Docker&FullyQualifiedName!~MigrationSmokeTests"
+```
+
+Run only the migration smoke test:
+
+```bash
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj --settings tests/docker.runsettings --filter "FullyQualifiedName~MigrationSmokeTests"
+```
+
+Database tests use the production context, production mappings, production
+migrations, Npgsql, and PostgreSQL `17.10`. They do not use EF Core InMemory,
+SQLite, or `EnsureCreated()` as substitutes for migration verification.
 
 ## Continuous integration
 
-Backend CI is configured in:
+Backend CI is defined in:
 
 ```text
-.github/workflows/backend-ci.yml
+../.github/workflows/backend-ci.yml
 ```
 
 The workflow:
 
-1. checks out the repository;
-2. installs the SDK from `global.json`;
-3. restores repository-local .NET tools;
-4. verifies the local EF Core CLI;
-5. restores the solution;
-6. verifies formatting;
-7. builds in Release with warnings treated as errors;
-8. audits vulnerable and outdated dependencies;
-9. runs unit tests with coverage;
-10. runs integration and explicit Docker compatibility tests with coverage;
-11. uploads test results and coverage artifacts.
+1. restores the pinned SDK and local tools;
+2. restores NuGet packages;
+3. verifies formatting;
+4. builds Release with warnings as errors;
+5. checks for pending EF Core model changes;
+6. reports vulnerable and outdated dependencies;
+7. runs unit tests;
+8. runs API and metadata integration tests;
+9. verifies Docker availability;
+10. runs PostgreSQL tests;
+11. runs the migration smoke test separately;
+12. uploads test results and coverage.
 
-The workflow is triggered for backend-related pull requests and pushes to
-`main`.
+## Secrets
+
+Never commit:
+
+- real database passwords or complete production connection strings;
+- `deploy/.env` or other environment-specific secret files;
+- access tokens, API keys, signing secrets, private keys, or certificates;
+- cloud, CI/CD, or secret-manager credentials;
+- database dumps containing real user data.
+
+Tracked files may contain configuration keys, non-secret examples, and isolated
+local or ephemeral test defaults. Deployed values belong in protected CI/CD
+secrets, environment variables, or a dedicated secret manager.

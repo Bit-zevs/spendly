@@ -188,7 +188,7 @@ A future conversion operation must explicitly define:
 
 ## DateRange status
 
-`DateRange` is intentionally not implemented in v0.3.
+`DateRange` is intentionally not implemented in the current Domain model.
 
 The current domain model has no entity or use case that requires a reusable date
 interval.
@@ -232,5 +232,8 @@ A value object added to this directory should:
 Do not introduce a value object only to wrap a primitive without adding domain
 meaning, validation, type safety, equality semantics, or behavior.
 
-For the complete description of the current domain model, see
-[Domain model](../../../../docs/architecture/domain-model.md).
+For the complete description of the current Domain model and its external
+persistence mapping, see:
+
+- [Domain model](../../../../docs/architecture/domain-model.md)
+- [Persistence architecture](../../../../docs/architecture/persistence.md)

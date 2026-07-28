@@ -44,18 +44,17 @@ Wallet instances are created through `Wallet.Create`. The constructor is private
 
 The numeric value `0` is intentionally not assigned to a wallet type. The wallet entity rejects default and otherwise undefined `WalletType` values.
 
-## Not included yet
+## Not part of the current Domain model
 
 The current model intentionally does not contain:
 
 - balance;
 - transactions;
 - user ownership;
-- persistence mappings;
-- Entity Framework Core attributes;
+- persistence annotations or EF Core configuration inside Domain;
 - API contracts;
 - CRUD operations.
 
 Balance rules and transaction history will be designed separately when the corresponding business requirements are introduced.
 
-Persistence details, database mappings, and API contracts must not be placed in the domain model.
+Production mapping exists in `Spendly.Infrastructure`; persistence details and API contracts must not be placed in the Domain model. See [Persistence Architecture](../../../../docs/architecture/persistence.md).

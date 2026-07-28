@@ -1,7 +1,7 @@
-# Local Infrastructure
+# Local Infrastructure and Database Deployment
 
-This directory contains local infrastructure definitions for Spendly
-development.
+This directory contains the Docker Compose definition used for local Spendly
+PostgreSQL development.
 
 ## Files
 
@@ -14,33 +14,51 @@ deploy/
 
 ## PostgreSQL service
 
-The Compose service is named `spendly-postgres` and uses the pinned image:
+The Compose service is named:
+
+```text
+spendly-postgres
+```
+
+It uses the pinned image:
 
 ```text
 postgres:17.10
 ```
 
-Default local values:
+Default isolated local values:
 
 ```text
 Database: spendly
-User: spendly
+Username: spendly
 Password: spendly_password
 Host port: 5432
 Container port: 5432
 ```
 
-The container name is not fixed, so multiple Compose projects can coexist
-without a global Docker name collision.
+The Compose configuration provides:
 
-The service includes a `pg_isready` health check.
+- a PostgreSQL container;
+- host-port override support;
+- a named volume for persistent local data;
+- a `pg_isready` health check;
+- environment overrides through `deploy/.env`.
 
-## Optional environment file
+The container name is not fixed, so separate Compose projects can coexist
+without a global container-name collision.
 
-Copy the example file when local overrides are needed:
+## Optional environment overrides
+
+Create an untracked local environment file from the repository root:
 
 ```bash
 cp deploy/.env.example deploy/.env
+```
+
+PowerShell:
+
+```powershell
+Copy-Item deploy/.env.example deploy/.env
 ```
 
 Available variables:
@@ -52,32 +70,34 @@ SPENDLY_POSTGRES_PASSWORD
 SPENDLY_POSTGRES_PORT
 ```
 
-The defaults and `.env.example` values are for isolated local development only.
-They must not be reused in production, staging, shared testing environments, or
-publicly reachable database instances.
+`deploy/.env` is ignored by Git. It configures the Compose container only and is
+not automatically loaded by a locally running .NET process.
 
 ## Start PostgreSQL
 
-Run from the repository root:
-
-```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
-```
-
-When `deploy/.env` was not created, omit `--env-file`; Compose will use the
-default values declared in `docker-compose.yml`:
+Without a local `.env` file:
 
 ```bash
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
-## Check health and state
+With `deploy/.env`:
+
+```bash
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
+```
+
+## Check state and health
 
 ```bash
 docker compose -f deploy/docker-compose.yml ps
 ```
 
-The service should eventually report a healthy state.
+The service should eventually report `healthy`.
+
+The health check runs `pg_isready` inside the container. It verifies that
+PostgreSQL accepts connections; it does not verify that Spendly migrations have
+been applied.
 
 ## View logs
 
@@ -87,77 +107,159 @@ docker compose -f deploy/docker-compose.yml logs -f spendly-postgres
 
 Press `Ctrl+C` to stop following logs. The container continues running.
 
-## Stop PostgreSQL
+## Stop or remove local infrastructure
 
-Stop without deleting the service or volume:
+Stop without removing the container or volume:
 
 ```bash
 docker compose -f deploy/docker-compose.yml stop
 ```
 
-Stop and remove the Compose container and network while preserving data:
+Remove the Compose container and network while preserving database data:
 
 ```bash
 docker compose -f deploy/docker-compose.yml down
 ```
 
-Permanently remove the database volume:
+Remove the container, network, and database volume:
 
 ```bash
 docker compose -f deploy/docker-compose.yml down --volumes
 ```
 
-The named volume is `spendly_postgres_data` and is mounted at
-`/var/lib/postgresql/data`.
+The named volume is:
 
-## Current backend integration status
+```text
+spendly_postgres_data
+```
 
-The API requires and validates PostgreSQL connection configuration, but it does
-not open a production database connection yet.
+It is mounted at:
 
-The required configuration key is:
+```text
+/var/lib/postgresql/data
+```
+
+Removing the volume permanently deletes local database data.
+
+## Connect the API
+
+The API requires:
 
 ```text
 ConnectionStrings:SpendlyDatabase
 ```
 
-The `deploy/.env` file configures the PostgreSQL Compose container only. It is
-not automatically loaded by the locally running .NET API.
-
-For local development, store the API connection string through .NET User
-Secrets from the `backend` directory:
+From `backend`, store the default local connection string with .NET User
+Secrets:
 
 ```bash
-dotnet user-secrets set \
-  "ConnectionStrings:SpendlyDatabase" \
-  "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password" \
-  --project src/Spendly.Api/Spendly.Api.csproj
+dotnet user-secrets set "ConnectionStrings:SpendlyDatabase" "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password" --project src/Spendly.Api/Spendly.Api.csproj
 ```
 
-The solution still has no production `DbContext`, migrations, repositories, or
-database readiness health check.
-
-A test-only EF Core compatibility context uses PostgreSQL Testcontainers to
-verify the immutable Domain model. That test is explicit and does not run in a
-normal `dotnet test Spendly.sln` invocation.
-
-Run it from the `backend` directory with Docker available:
-
-```bash
-dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj \
-  --settings tests/docker.runsettings
-```
-
-## Secrets and production environments
-
-Real credentials must not be committed to the repository.
-
-Local development credentials should be supplied through .NET User Secrets.
-Deployed environments should use environment variables, CI/CD secret storage,
-or a dedicated production secret manager.
-
-The environment variable corresponding to the API connection string is:
+The equivalent environment variable is:
 
 ```text
 ConnectionStrings__SpendlyDatabase
 ```
+
+PowerShell:
+
+```powershell
+$env:ConnectionStrings__SpendlyDatabase = "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
+
+Bash:
+
+```bash
+export ConnectionStrings__SpendlyDatabase="Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
+
+The API validates the connection string during startup and registers a shared
+`NpgsqlDataSource`, `SpendlyDbContext`, and PostgreSQL readiness check.
+
+## Apply migrations
+
+Starting PostgreSQL does not create the Spendly schema. Apply migrations as an
+explicit step from `backend`:
+
+```bash
+dotnet tool restore
+dotnet ef database update --project src/Spendly.Infrastructure/Spendly.Infrastructure.csproj --startup-project src/Spendly.Api/Spendly.Api.csproj --context SpendlyDbContext --connection "Host=localhost;Port=5432;Database=spendly;Username=spendly;Password=spendly_password"
+```
+
+The API and Worker do not call `Database.Migrate()` or
+`Database.MigrateAsync()` at startup.
+
+This separation keeps application startup from changing schema state and avoids
+migration races when several application replicas start together.
+
+For a deployed environment, apply a reviewed SQL script, an EF Core migration
+bundle, or another controlled one-time migration job before the new application
+version starts serving traffic.
+
+## Run the API and verify readiness
+
+From `backend`:
+
+```bash
+dotnet run --project src/Spendly.Api/Spendly.Api.csproj --launch-profile https
+```
+
+Then check:
+
+```bash
+curl --insecure https://localhost:7037/health/live
+curl --insecure https://localhost:7037/health/ready
+```
+
+Expected behavior:
+
+- liveness remains healthy while the API process can respond;
+- readiness is healthy only when the self-check and PostgreSQL check succeed;
+- readiness returns `503 Service Unavailable` when PostgreSQL is unavailable;
+- readiness does not create tables or apply migrations.
+
+## Database integration tests
+
+Database tests use temporary PostgreSQL containers, not the Compose service.
+A Docker-compatible engine must be running, but the local `spendly-postgres`
+service does not need to be started.
+
+From `backend`:
+
+```bash
+dotnet test tests/Spendly.IntegrationTests/Spendly.IntegrationTests.csproj --settings tests/docker.runsettings
+```
+
+The tests use production EF Core mappings and migrations, then remove their
+containers after the test lifecycle completes.
+
+## Production deployment principles
+
+A production deployment should:
+
+1. supply the connection string through protected environment configuration or
+   a secret manager;
+2. apply reviewed migrations once for the target database;
+3. start the new API and Worker version without automatic schema mutation;
+4. wait for readiness before routing traffic;
+5. retain a rollout and data-recovery plan for destructive migrations.
+
+The runtime database identity should not require schema-alteration permissions
+unless the selected deployment mechanism explicitly uses that identity for the
+migration step.
+
+## Secrets
+
+Do not commit:
+
+- real PostgreSQL passwords;
+- production or shared-environment connection strings;
+- `deploy/.env`;
+- cloud, CI/CD, or secret-manager credentials;
+- private keys or client certificates;
+- database backups containing real data.
+
+The values in `.env.example`, `docker-compose.yml`, and Testcontainers fixtures
+are isolated local or ephemeral defaults. They must not be reused for staging,
+production, shared test environments, or publicly reachable databases.

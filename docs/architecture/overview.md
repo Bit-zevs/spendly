@@ -1,29 +1,47 @@
-﻿# Architecture Overview
+# Architecture Overview
 
-Spendly is being developed as a modular monolith with Clean Architecture Lite.
+Spendly is developed as a modular monolith with Clean Architecture Lite.
 
-The current structure provides explicit dependency boundaries without adding
-the operational complexity of microservices.
+The current structure creates explicit dependency boundaries without adding the
+operational complexity of microservices. The product is still deployed as a
+small set of hosts that share one codebase and one PostgreSQL database.
 
 ## Goals
 
-The architecture is intended to provide:
+The architecture provides:
 
-- a domain model independent from frameworks;
+- a Domain model independent from frameworks;
 - clear ownership of business rules;
-- testable application behavior;
-- replaceable infrastructure implementations;
+- testable Application behavior;
+- replaceable Infrastructure implementations;
 - thin HTTP and background-processing hosts;
-- a simple local development and deployment model;
-- the ability to introduce internal modules as the product grows.
+- explicit PostgreSQL schema and deployment rules;
+- a simple local development model;
+- room for internal modules as product behavior grows.
+
+## Current milestone
+
+```text
+v0.4 Persistence Layer
+```
+
+The repository currently has:
+
+- backend hosting and observability foundations;
+- the first Domain model;
+- production EF Core and PostgreSQL persistence;
+- the initial database migration;
+- database readiness checking;
+- real PostgreSQL integration tests.
+
+Application use cases, repositories, and domain feature endpoints are not
+implemented yet.
 
 ## Backend projects
 
 ### Spendly.Domain
 
-The innermost project.
-
-It contains:
+The innermost project contains:
 
 - entities;
 - value objects;
@@ -32,91 +50,86 @@ It contains:
 - domain errors;
 - business behavior that does not require external systems.
 
-It must remain pure C# and must not reference other Spendly projects.
+It has no references to other Spendly projects and contains no EF Core,
+PostgreSQL, HTTP, logging, or serialization dependencies.
 
 ### Spendly.Application
 
-Contains application-specific use cases.
-
-It will coordinate domain objects and define contracts required from external
-systems.
+The Application project will contain use cases and define contracts required
+from outer systems.
 
 Expected contents include:
 
-- commands;
-- queries;
-- handlers;
-- application services;
+- commands and queries;
+- handlers and application services;
 - validators;
-- repository interfaces;
-- transaction boundaries;
 - authorization decisions;
-- ports for infrastructure services.
+- domain-specific persistence ports;
+- ports for clocks, external systems, and messaging;
+- read projections independent from HTTP.
 
-Application may depend on Domain but must not depend on ASP.NET Core endpoints,
-EF Core implementation details, or concrete external services.
+Application may depend on Domain, but not on EF Core implementation details,
+ASP.NET Core endpoints, or concrete infrastructure services.
 
-No production use cases are implemented in this project yet.
+No production use cases are implemented yet.
 
 ### Spendly.Infrastructure
 
-Contains technical implementations of contracts defined by inner layers.
+Infrastructure contains the implemented technical persistence layer:
 
-Expected contents include:
+- `SpendlyDbContext`;
+- EF Core configurations;
+- converters for Domain identifiers, currencies, and enums;
+- PostgreSQL connection options and validation;
+- one shared `NpgsqlDataSource`;
+- EF Core migrations;
+- PostgreSQL readiness checking.
 
-- EF Core `DbContext`;
-- entity configurations;
-- PostgreSQL repositories;
-- migrations;
-- external API clients;
-- messaging;
-- caching;
-- file storage;
-- technical clock implementations.
-
-Infrastructure currently contains project references only. Database access is
-not implemented.
+Future technical implementations may include repositories for real Application
+ports, external API clients, messaging, caching, file storage, and clocks.
 
 ### Spendly.Api
 
-The HTTP delivery mechanism.
+The HTTP host currently provides:
 
-It currently provides:
-
-- ASP.NET Core application startup;
-- dependency injection configuration;
+- ASP.NET Core startup;
+- dependency registration;
 - validated strongly typed options;
-- Serilog logging;
-- request logging;
+- Serilog logging and request logging;
 - centralized exception handling;
 - ProblemDetails responses;
-- health checks;
-- OpenAPI;
-- Scalar;
-- a root status endpoint.
+- root status endpoint;
+- liveness and readiness endpoints;
+- OpenAPI and Scalar.
 
-Future feature endpoints must delegate work to Application use cases instead of
-implementing business rules directly.
+Future feature endpoints must translate HTTP contracts and delegate work to
+Application use cases. They must not implement Domain business rules directly.
 
 ### Spendly.Worker
 
-The background-processing delivery mechanism.
+The background-processing host currently starts and waits for shutdown without
+scheduled financial jobs.
 
-The current worker is a minimal host without scheduled domain jobs.
-
-Future jobs must call Application use cases. The Worker must not duplicate
-business rules from Domain.
+Future jobs must call Application use cases and must not duplicate business
+rules from Domain.
 
 ### Test projects
 
-`Spendly.UnitTests` verifies isolated Domain and future Application behavior.
+`Spendly.UnitTests` verifies Domain and future Application behavior without
+infrastructure.
 
-`Spendly.IntegrationTests` verifies the configured API host and, in future
-milestones, infrastructure integrations.
+`Spendly.IntegrationTests` verifies:
+
+- the configured API host;
+- EF Core production model metadata;
+- PostgreSQL migrations and physical schema;
+- Domain persistence round trips;
+- relationship behavior;
+- PostgreSQL readiness.
 
 ## Dependency direction
 
-The conceptual dependency direction is inward:
+Conceptual dependency direction is inward:
 
 ```text
 ┌───────────────────────────────────────────────┐
@@ -156,46 +169,43 @@ Spendly.Worker
   └── Spendly.Infrastructure
 ```
 
+Infrastructure currently references Application even though no persistence
+ports exist yet. That preserves the intended dependency direction for future
+implementations without allowing Application to depend on EF Core.
+
 ## Why Domain is independent
 
-Domain contains the rules that define valid Spendly business state.
-
-These rules should produce the same result regardless of whether the
-application is used through:
+Domain defines valid Spendly business state. Its rules should produce the same
+result regardless of whether a use case is invoked through:
 
 - an HTTP API;
 - a background worker;
+- a web or mobile client;
 - a Telegram bot;
-- a web application;
-- a mobile application;
 - a command-line tool;
-- unit tests.
+- a unit test.
 
-The same business rules should also remain valid if PostgreSQL or EF Core is
-replaced.
+The same model should remain valid if EF Core or PostgreSQL is replaced.
 
-For this reason Domain must not know about:
+Domain therefore does not know about:
 
 - controllers or minimal API endpoints;
-- HTTP status codes;
-- ProblemDetails;
+- HTTP status codes or ProblemDetails;
 - JSON contracts;
-- EF Core attributes;
-- `DbContext`;
-- database tables;
-- SQL;
+- EF Core attributes or `DbContext`;
+- database tables or SQL;
 - logging implementations;
-- external service clients.
+- external clients.
 
-Outer layers may translate domain behavior into their own representation. For
-example, Api may translate a domain error into a ProblemDetails response, but
-Domain must not produce an HTTP response itself.
+Infrastructure may use private constructors, backing fields, complex
+properties, and converters to persist Domain objects without introducing those
+concerns into Domain.
 
-## Current request flow
+## Current runtime flows
 
-The current API has no domain feature use cases yet.
+### Technical API endpoint
 
-Its present request flow is:
+The API has no domain feature use cases yet. Its current general request flow is:
 
 ```text
 HTTP request
@@ -204,6 +214,29 @@ Spendly.Api endpoint or middleware
     ↓
 configured response
 ```
+
+### Readiness endpoint
+
+Readiness crosses the Infrastructure boundary:
+
+```text
+GET /health/ready
+    ↓
+Spendly.Api health endpoint
+    ↓
+HealthCheckService
+    ↓
+Spendly.Infrastructure PostgreSqlHealthCheck
+    ↓
+NpgsqlDataSource
+    ↓
+PostgreSQL SELECT 1
+```
+
+The readiness path checks connectivity only. It does not apply migrations or
+change schema state.
+
+### Future feature request
 
 After Application use cases are introduced, the intended flow is:
 
@@ -216,74 +249,78 @@ Spendly.Application use case
     ↓
 Spendly.Domain model
     ↓
-Application contract
+Application persistence or external-system port
     ↓
 Spendly.Infrastructure implementation
+    ↓
+PostgreSQL or another dependency
     ↓
 HTTP response
 ```
 
-The Worker will use the same Application and Domain layers without involving
+The Worker will reuse the same Application and Domain layers without involving
 HTTP.
 
-## Current domain model
+## Current Domain model
 
-Version v0.3 currently contains:
+The Domain model introduced in v0.3 contains:
 
 - `Entity<TId>`;
 - `ValueObject`;
 - `IStronglyTypedId<TValue>`;
-- `DomainError`;
-- `DomainException`;
-- `DomainErrors`;
-- `Currency`;
-- `Money`;
-- `Wallet`;
-- `Category`;
-- `Transaction`;
+- `DomainError`, `DomainException`, and `DomainErrors`;
+- `Currency` and `Money`;
+- `Wallet`, `Category`, and `Transaction`;
 - strongly typed identifiers and supporting enums.
 
-See [Domain Model](domain-model.md) for complete rules.
+See [Domain Model](domain-model.md).
 
 ## Current persistence boundary
 
-PostgreSQL is available through the optional Docker Compose configuration.
+Production persistence is implemented in `Spendly.Infrastructure`.
 
-The production projects do not yet contain:
+The context is:
 
-- a production `DbContext`;
-- migrations;
-- repository implementations;
-- a connection string used by the API;
-- database health checks;
-- application persistence use cases.
+```text
+backend/src/Spendly.Infrastructure/Persistence/SpendlyDbContext.cs
+```
 
-The future storage contract is accepted in
-[ADR 0003: Define domain model persistence strategy](../adr/0003-define-domain-model-persistence-strategy.md).
-It fixes PostgreSQL types, value conversions, enum storage, monetary precision,
-UTC timestamp rules, naming conventions, restrictive foreign keys, migration
-deployment policy, and Testcontainers-based database testing.
+The layer includes:
 
-A database-backed compatibility spike exists in
-`Spendly.IntegrationTests.Persistence.Compatibility`.
+- explicit PostgreSQL mappings;
+- strongly typed ID converters;
+- `Currency` and `Money` mapping;
+- enum and UTC timestamp mapping;
+- restrictive transaction foreign keys;
+- explicit check constraints and indexes;
+- migration history;
+- startup connection validation;
+- a readiness health check.
 
-The spike uses EF Core, Npgsql, PostgreSQL, and Testcontainers to verify that
-the immutable Domain model can be persisted and materialized without public
-setters or EF Core attributes. Metadata-based tests also protect the accepted
-storage contract without opening a database connection.
+The API registers the persistence infrastructure, but normal technical
+endpoints do not create Domain data because Application use cases do not exist.
 
-The spike context and configurations are test-only. Production mappings should
-later be implemented in Infrastructure using ADR 0003, then covered by
-migration and PostgreSQL round-trip tests before the temporary context is
-removed.
+Repositories are intentionally deferred. They will be defined as focused
+Application ports when concrete use cases require them. A generic CRUD
+repository is not used.
 
-See
-[EF Core Domain Model Compatibility](ef-core-domain-model-compatibility.md)
-for the complete findings.
+See [Persistence Architecture](persistence.md).
+
+## Migration boundary
+
+API and Worker startup do not call `Database.Migrate()` or
+`Database.MigrateAsync()`.
+
+Schema updates are explicit deployment operations. This avoids DDL races
+between replicas, keeps runtime database permissions narrow, and requires
+review of destructive or data-rewriting changes.
+
+Integration tests apply production migrations because migration execution is
+the behavior being verified.
 
 ## Current API boundary
 
-The API currently exposes technical foundation endpoints only:
+The API exposes technical foundation endpoints only:
 
 - root status;
 - liveness;
@@ -292,15 +329,14 @@ The API currently exposes technical foundation endpoints only:
 - Scalar.
 
 Wallet, category, transaction, authentication, budget, and reporting endpoints
-are intentionally deferred until their Application use cases exist.
+remain deferred until their Application use cases exist.
 
 ## Modular monolith evolution
 
 Spendly currently has project-level architecture boundaries rather than
 separate deployable services.
 
-As the product grows, domain capabilities may be organized into internal
-modules such as:
+As real behavior grows, internal modules may emerge, for example:
 
 - Accounts;
 - Finance;
@@ -310,11 +346,10 @@ modules such as:
 - Reporting;
 - Notifications.
 
-A module should be introduced when there is enough real behavior to define a
-meaningful boundary. Empty abstractions and speculative modules should not be
-added in advance.
+A module is introduced when enough behavior exists to define a meaningful
+boundary. Empty modules and speculative abstractions are not added in advance.
 
-## Architectural decision records
+## Architectural decisions
 
 Important decisions are stored in:
 
@@ -325,4 +360,6 @@ docs/adr
 Current decisions:
 
 - use a modular monolith;
-- defer a generic `DateRange` until a real use case defines its semantics.
+- defer a generic `DateRange` until a real use case defines its semantics;
+- use explicit EF Core and PostgreSQL persistence rules with controlled
+  migrations and domain-specific persistence ports.

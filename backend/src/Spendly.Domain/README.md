@@ -165,8 +165,9 @@ A wallet currently has:
 - a required currency;
 - a UTC creation timestamp.
 
-Wallet balance behavior, ownership, persistence, updates, and API contracts are
-not implemented yet.
+Wallet balance behavior, ownership, updates, and API contracts are not
+implemented yet. Production persistence is configured outside Domain in
+`Spendly.Infrastructure`.
 
 ## Categories
 
@@ -183,8 +184,9 @@ A category currently has:
 - either the `Income` or `Expense` type;
 - a UTC creation timestamp.
 
-Icons, colors, hierarchy, budget limits, ownership, persistence, updates, and
-API contracts are not implemented yet.
+Icons, colors, hierarchy, budget limits, ownership, updates, and API contracts
+are not implemented yet. Production persistence is configured outside Domain in
+`Spendly.Infrastructure`.
 
 ## Transactions
 
@@ -247,7 +249,8 @@ that are genuinely calendar based.
 
 ## DateRange decision
 
-A generic `DateRange` value object is intentionally not implemented in v0.3.
+A generic `DateRange` value object is intentionally not implemented in the
+current Domain model.
 
 No current entity requires a reusable date interval. Its design is deferred
 until a real budget, report, goal, subscription, or transaction-filtering use
@@ -287,9 +290,11 @@ Complete domain model and business rules:
 
 - [Domain model](../../../docs/architecture/domain-model.md)
 
-Architectural decision about date ranges:
+Architecture and persistence documentation:
 
+- [Persistence architecture](../../../docs/architecture/persistence.md)
 - [ADR 0002: Defer DateRange until required](../../../docs/adr/0002-defer-date-range-until-required.md)
+- [ADR 0003: Define domain model persistence strategy](../../../docs/adr/0003-define-domain-model-persistence-strategy.md)
 
 Folder-specific documentation:
 

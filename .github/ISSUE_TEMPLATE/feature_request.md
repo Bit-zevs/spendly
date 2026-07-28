@@ -1,4 +1,4 @@
-﻿---
+---
 name: Feature request
 about: New product feature
 title: "feat: "
@@ -25,11 +25,13 @@ Why does the user need this?
 - Frontend:
 - Database:
 - Tests:
+- Documentation:
 
 ## Definition of Done
 
 - [ ] Code is implemented
 - [ ] Tests are added or updated
+- [ ] Product delivery status is updated when the delivered capability changes
+- [ ] Architecture and operational documentation are updated when affected
 - [ ] Pull Request is created
 - [ ] CI checks pass
-- [ ] Documentation is updated if needed

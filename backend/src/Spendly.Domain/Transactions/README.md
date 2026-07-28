@@ -79,7 +79,7 @@ currently supported transactions require a category.
 New identifiers are generated as version 7 UUIDs. Existing identifiers can be
 restored through `TransactionId.From`, which rejects `Guid.Empty`.
 
-## Not included yet
+## Not part of the current Domain model
 
 The current model intentionally does not contain:
 
@@ -92,12 +92,12 @@ The current model intentionally does not contain:
 - corrections;
 - split transactions;
 - recurring transaction rules;
-- persistence mappings;
-- Entity Framework Core attributes;
+- persistence annotations or EF Core configuration inside Domain;
 - API contracts or endpoints.
 
 Additional transaction kinds and business rules should be introduced only when
 their real use cases and invariants are known.
 
 This folder must contain business rules only, not API endpoints, database
-queries, or infrastructure integrations.
+queries, or infrastructure integrations. Production transaction mapping is
+documented in [Persistence Architecture](../../../../docs/architecture/persistence.md).
